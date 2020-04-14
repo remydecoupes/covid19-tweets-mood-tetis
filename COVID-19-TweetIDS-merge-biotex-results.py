@@ -41,11 +41,34 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
         #faire les sort : max, average et sum
         # commenter les résultats
 
+def rankMergeResult(mergeResultDir):
+    """
+
+    :param mergeResultDir:
+    :return:
+    """
+    rankedMeasures = ['max', 'sum', 'average']
+    dfcompare = pd.DataFrame()
+    for file in mergeResultDir.glob("merge*"):
+        df = pd.read_csv(file)
+        for measure in rankedMeasures:
+            df.sort_values(by=measure, inplace=True, ascending=False)
+            # print("Biotex Param: "+str(file.name).replace("merge30ktweets-english-","")+" | measure: "+measure)
+            # print(df['term'].head(n=20).to_string(index=False))
+            dfcompare[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") + "_" + measure] = \
+                df['term'].head(n=20).values
+    column_order = ['ftfidfc-multi_max', 'ftfidfc-all_max', 'ftfidfc-multi_average', 'ftfidfc-all_average',
+                    'ftfidfc-multi_sum', 'ftfidfc-all_sum', 'c-value-multi_max', 'c-value-all_max',
+                    'c-value-multi_average', 'c-value-multi_average', 'c-value-multi_sum', 'c-value-multi_sum']
+    dfcompare[column_order].to_csv(str(mergeResultDir)+"/compareparam.csv")
+
+
 
 
 if __name__ == '__main__':
     print("begin")
     biotexResultDir = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus')
     mergeResultDir = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
-    mergeBiotex(biotexResultDir, mergeResultDir)
+    # mergeBiotex(biotexResultDir, mergeResultDir)
+    rankMergeResult(mergeResultDir)
     print("end")
