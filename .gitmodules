@@ -1,0 +1,3 @@
+[submodule "biotex-wrapper-fize/biotex_python"]
+	path = biotex-wrapper-fize/biotex_python
+	url = https://gitlab.irstea.fr/jacques.fize/biotex_python

@@ -1,0 +1,26 @@
+# twitter data
+biotexcorpus/
+biotexResults
+echen102_COVID19-TweetIDs
+hydrating-and-extracting
+randomSampling_hydrating-and-extracting
+extractedTweetsWithoutPreprocess
+tfidfpython
+dataset-analyse.csv
+
+# Runs
+numberOfTweetsPerDayPeriod3.png
+numberOfTweetsPerDay.png
+trash
+
+# Biotex temp files
+configuration.txt
+
+# venv Python
+venv
+
+# logs
+*.log
+
+# IDE 
+.idea
