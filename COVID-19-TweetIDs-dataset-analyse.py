@@ -9,7 +9,7 @@ import os
 from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import json
 
 def daterange(start_date, end_date):
     """
@@ -37,6 +37,31 @@ def nbOfTweetsPerDay(day, tweetsIdFiles):
                 num_lines_day += num_lines
     return num_lines_day
 
+def plotTweetsFromEchen():
+    """
+
+    :return:
+    """
+    listOfTweetsPerDay = defaultdict()
+    startDate = date(2020, 1, 22)
+    enDate = date(2020, 2, 11)
+    tweetsDir = Path('echen102_COVID19-TweetIDs/COVID-19-TweetIDs')
+    for single_date in daterange(startDate, enDate):
+        listOfTweetsPerDay[single_date.strftime("%Y-%m-%d")] = nbOfTweetsPerDay(single_date, tweetsDir)
+        #listOfTweetsPerDay[single_date] = nbOfTweetsPerDay(single_date, tweetsDir)
+    #print(listOfTweetsPerDay)
+    # Plot
+    plt.style.use('ggplot')
+    series = pd.Series(listOfTweetsPerDay)
+    series.to_csv("dataset-analyse.csv")
+    #series.index = pd.DateTimeIndex(series.index)
+
+    fig, ax = plt.subplots(figsize=(15, 7))
+    series.plot(kind='bar', x='date', y='number of tweets per day', ax=ax,
+                title='Number of tweets from Echen102/COVID-19-TweetIDs per day on period 3')
+    plt.savefig('numberOfTweetsPerDayPeriod3.png')
+    plt.show()
+
 
 def nbOfTweetsAndRTPerDay(day, hydrateDir):
     """
@@ -60,31 +85,14 @@ def nbOfTweetsAndRTPerDay(day, hydrateDir):
                             num_tweets +=1
     return [day, num_tweets, num_rt]
 
-if __name__ == '__main__':
-    print("begin")
+def plotTweetsAndRT():
+    """
+
+    :return:
+    """
     listOfTweetsPerDay = defaultdict()
     startDate = date(2020, 1, 22)
     enDate = date(2020, 2, 11)
-
-    ## Count nb of tweets from github echen
-    # tweetsDir = Path('echen102_COVID19-TweetIDs/COVID-19-TweetIDs')
-    # for single_date in daterange(startDate, enDate):
-    #     listOfTweetsPerDay[single_date.strftime("%Y-%m-%d")] = nbOfTweetsPerDay(single_date, tweetsDir)
-    #     #listOfTweetsPerDay[single_date] = nbOfTweetsPerDay(single_date, tweetsDir)
-    # #print(listOfTweetsPerDay)
-    ## Plot
-    # plt.style.use('ggplot')
-    # series = pd.Series(listOfTweetsPerDay)
-    # series.to_csv("dataset-analyse.csv")
-    # #series.index = pd.DateTimeIndex(series.index)
-    #
-    # fig, ax = plt.subplots(figsize=(15, 7))
-    # series.plot(kind='bar', x='date', y='number of tweets per day', ax=ax,
-    #             title='Number of tweets from Echen102/COVID-19-TweetIDs per day on period 3')
-    # plt.savefig('numberOfTweetsPerDayPeriod3.png')
-    # plt.show()
-
-    ## Count nb of tweets and retweet from hydrating and extracting
     tweetsHydrateDir = Path('hydrating-and-extracting')
     df = pd.DataFrame(columns=('date', 'tweets', 'retweets'))
     i = 0
@@ -104,4 +112,69 @@ if __name__ == '__main__':
             title='Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3')
     plt.savefig('numberOfTweetsPerDayPeriod3.png')
     plt.show()
+
+def tweetLocation():
+    """
+    Adapt from https://marcobonzanini.com/2015/06/16/mining-twitter-data-with-python-and-js-part-7-geolocation-and-interactive-maps/
+    :return:
+    """
+    # startDate = date(2020, 1, 22)
+    # enDate = date(2020, 2, 11)
+    tweetsHydrateDir = Path('hydrating-and-extracting')
+    geo_data = {
+        "type": "FeatureCollection",
+        "features": []
+    }
+    for root, dirs, files in os.walk(tweetsHydrateDir):
+        for file in files:
+            if file.startswith('coronavirus-tweet-id-') and file.endswith('.jsonl'):
+                filepath = os.path.join(root, file)
+                with open(filepath, 'r') as f:
+                    for line in f:
+                        tweet = json.loads(line)
+                        if tweet['coordinates']:
+                            try: # is-it a RT ?
+                                geo_json_feature = {
+                                    "type": "Feature",
+                                    "geometry": tweet['coordinates'],
+                                    "properties": {
+                                        #"text": tweet['full_text'],
+                                        "rt": True,
+                                        "quoted": tweet['is_quote_status'],
+                                        "created_at": tweet['created_at']
+                                    }
+                                }
+                            except: #Is not a RT
+                                geo_json_feature = {
+                                    "type": "Feature",
+                                    "geometry": tweet['coordinates'],
+                                    "properties": {
+                                        #"text": tweet['full_text'],
+                                        "rt": False,
+                                        "quoted": tweet['is_quote_status'],
+                                        "created_at": tweet['created_at']
+                                    }
+                                }
+                            geo_data['features'].append(geo_json_feature)
+        print(geo_data)
+        with open('COVID19_echen_geo_data.json', 'w') as fout:
+            fout.write(json.dumps(geo_data, indent=4))
+
+
+if __name__ == '__main__':
+    print("begin")
+    listOfTweetsPerDay = defaultdict()
+    startDate = date(2020, 1, 22)
+    enDate = date(2020, 2, 11)
+
+    ## Count nb of tweets from github echen
+    # plotTweetsFromEchen()
+
+    ## Count nb of tweets and retweet from hydrating and extracting
+    # plotTweetsAndRT()
+
+    ## Stat on location
+    tweetLocation()
+
+
     print("end")
