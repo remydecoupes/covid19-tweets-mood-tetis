@@ -5,6 +5,7 @@ This project aims to extracts terms about covid-19 in the corpus of tweets creat
 This repository is based upon works of:
 * **Juan Antonio LOSSIO-VENTURA** creator of [BioTex](https://github.com/sifrproject/biotex/tree/master)
 * **Jacques Fize** who build a python wrapper of Biotext (see [his repository](https://gitlab.irstea.fr/jacques.fize/biotex_python) for more details)
+* **Gaurav Shrivastava** who code FASTR algorithme in python. His script is in this repository
 
 NB : **Due to the size of this corpus, biotex could not be launched on the full corpus. It has to be splitt in 30k tweets. Then results have to be merged and ranked**
 
