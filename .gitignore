@@ -12,9 +12,14 @@ dataset-analyse.csv
 numberOfTweetsPerDayPeriod3.png
 numberOfTweetsPerDay.png
 trash
+COVID19_echen_geo_data.json
 
 # Biotex temp files
 configuration.txt
+
+# fastr
+fastr/driven_extraction_version_*
+fastr/input/*
 
 # venv Python
 venv

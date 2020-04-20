@@ -10,6 +10,8 @@ from collections import defaultdict
 import pandas as pd
 import matplotlib.pyplot as plt
 import json
+import geopandas as gpd
+import time
 
 def daterange(start_date, end_date):
     """
@@ -113,7 +115,7 @@ def plotTweetsAndRT():
     plt.savefig('numberOfTweetsPerDayPeriod3.png')
     plt.show()
 
-def tweetLocation():
+def tweetLocationExtract(geoJsonfile):
     """
     Adapt from https://marcobonzanini.com/2015/06/16/mining-twitter-data-with-python-and-js-part-7-geolocation-and-interactive-maps/
     :return:
@@ -134,14 +136,19 @@ def tweetLocation():
                         tweet = json.loads(line)
                         if tweet['coordinates']:
                             try: # is-it a RT ?
+                                test = tweet['retweeted_status']
                                 geo_json_feature = {
                                     "type": "Feature",
                                     "geometry": tweet['coordinates'],
                                     "properties": {
                                         #"text": tweet['full_text'],
+                                        "tweetID": tweet['id'],
                                         "rt": True,
                                         "quoted": tweet['is_quote_status'],
-                                        "created_at": tweet['created_at']
+                                        # parse Date into iso8601
+                                        "created_at": time.strftime('%Y-%m-%d %H:%M:%S',
+                                                                    time.strptime(tweet['created_at'],
+                                                                                  '%a %b %d %H:%M:%S +0000 %Y'))
                                     }
                                 }
                             except: #Is not a RT
@@ -150,14 +157,18 @@ def tweetLocation():
                                     "geometry": tweet['coordinates'],
                                     "properties": {
                                         #"text": tweet['full_text'],
+                                        "tweetID": tweet['id'],
                                         "rt": False,
                                         "quoted": tweet['is_quote_status'],
-                                        "created_at": tweet['created_at']
+                                        # parse Date into iso8601
+                                        "created_at": time.strftime('%Y-%m-%d %H:%M:%S',
+                                                                    time.strptime(tweet['created_at'],
+                                                                                  '%a %b %d %H:%M:%S +0000 %Y'))
                                     }
                                 }
                             geo_data['features'].append(geo_json_feature)
         print(geo_data)
-        with open('COVID19_echen_geo_data.json', 'w') as fout:
+        with open(geoJsonfile, 'w') as fout:
             fout.write(json.dumps(geo_data, indent=4))
 
 
@@ -174,7 +185,10 @@ if __name__ == '__main__':
     # plotTweetsAndRT()
 
     ## Stat on location
-    tweetLocation()
+    geoJsonfile = 'COVID19_echen_geo_data.json'
+    tweetLocationExtract(geoJsonfile)
+    # geodata = gpd.read_file(geoJsonfile)
+    # geodata.plot()
 
 
     print("end")
