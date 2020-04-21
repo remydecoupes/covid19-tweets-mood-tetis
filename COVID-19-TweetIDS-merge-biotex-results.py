@@ -5,8 +5,10 @@ Merge biotex results from 30k tweets per files
 """
 import pandas as pd
 from pathlib import Path
+import json
 
 biotexparams = ['ftfidfc-all', 'ftfidfc-multi', 'c-value-all', 'c-value-multi']
+
 
 def mergeBiotex(biotexResultDir, mergeResultDir):
     columnsName = ['term', 'max', 'sum', 'occurence', 'average', 'ulms']
@@ -14,10 +16,10 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
         dfTerms = pd.DataFrame(columns=columnsName)
         i = 0
         biotexResultDirParam = biotexResultDir.joinpath(param)
-        for file in biotexResultDirParam.glob("biotex*"):
+        for file in biotexResultDirParam.glob("fastr*"):
             i += 1
-            dfToMerge = pd.read_csv(file, sep='\t')
-            dfToMerge.columns = ['term','ulms'+str(i), 'score'+str(i)]
+            dfToMerge = pd.read_csv(file, sep=',')
+            dfToMerge.columns = [i, 'term','ulms'+str(i), 'score'+str(i)]
             dfTerms = dfTerms.merge(dfToMerge, on='term', how='outer') # outer : union of keys from both frames,
                 # similar to a SQL full outer join; sort keys lexicographically.
                 # Default is inner : intersection
@@ -25,7 +27,7 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
             dfTerms["sum"] = dfTerms[["sum", 'score'+str(i)]].sum(axis=1)
             ## Average
             # occurence number for each term
-            print(i)
+            # print(i)
             dfTerms['occurence'].fillna(0, inplace=True) # transform NA to 0
             dfTerms.loc[dfTerms['term'].isin(dfToMerge['term']), 'occurence'] += 1
             dfTerms["average"] = dfTerms["sum"] / dfTerms['occurence']
@@ -33,7 +35,7 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
             dfTerms['ulms'+str(i)] = dfTerms['ulms'+str(i)].astype(bool)
             dfTerms["ulms"] = dfTerms["ulms"] | dfTerms['ulms'+str(i)]
             # delete row after aggregation
-            dfTerms = dfTerms.drop(['score'+str(i), 'ulms'+str(i)], 1) # ,1 : axis : column
+            dfTerms = dfTerms.drop([i, 'score'+str(i), 'ulms'+str(i)], 1) # ,1 : axis : column
         dfTerms.to_csv(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv"))
         print("save file: "+str(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv")))
         #faire les sort : max, average et sum
@@ -67,6 +69,7 @@ def rankMergeResult(mergeResultDir):
     rankedMeasures = ['max', 'sum', 'average']
     dfcompare = pd.DataFrame()
     nbTerms = 100
+
     # for file in mergeResultDir.glob("merge*"): #since E1
     for file in mergeResultDir.glob("*all.csv"):
         df = cleanMergeResult(pd.read_csv(file)) # clean up acocrding to E2
@@ -96,15 +99,54 @@ def rankMergeResult(mergeResultDir):
                     'ftfidfc-all_mutltiExtracted_average', 'ftfidfc-all_sum', 'ftfidfc-all_mutltiExtracted_sum',
                     'c-value-all_max', 'c-value-all_mutltiExtracted_max', 'c-value-all_average',
                     'c-value-all_mutltiExtracted_average', 'c-value-all_sum', 'c-value-all_mutltiExtracted_sum']
-    dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir)+"/compareparam.csv")
+    dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir) + "/compareparam.csv")
 
+
+
+def fastrOnBiotexResult(biotexResultDir,fastrvariants):
+    """
+    - E4 : remove Fastr variants terms : Except for the 1rst term, delete all variants fast
+        terms from biotex ranking
+    Save files with fastr
+    :param biotexResultDir: biotex results
+    :param fastrvariants: files containing variants from FASTR algo corresponding to this corpus
+    :return:
+    """
+    ## Read Variants from FASTR as a dict
+    with open(fastrvariants) as json_file:
+        fastr = json.load(json_file)
+    ## Open biotex results
+    for param in biotexparams:
+        biotexResultDirParam = biotexResultDir.joinpath(param)
+        for file in biotexResultDirParam.glob("biotex*"):
+            df = pd.read_csv(file, sep='\t')
+            df.columns = ['term', 'ulms', 'score']
+            #print(file.name)
+            ## browse on variant
+            for term in fastr:
+                i = 0
+                for variant in fastr[term][0]:
+                    indexToRemove = df[df['term'] == variant]
+                    if not indexToRemove.empty:
+                        if i > 0:
+                            df.drop(indexToRemove.index, inplace=True)
+                        i += 1
+            # print(biotexResultDirParam.joinpath("faster"+file.name))
+            df.to_csv(biotexResultDirParam.joinpath("fastr"+file.name))
 
 
 
 if __name__ == '__main__':
     print("begin")
     biotexResultDir = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus')
-    mergeResultDir = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
-    # mergeBiotex(biotexResultDir, mergeResultDir)
+    mergeResultDir = \
+        Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
+    fastrVariants = \
+        Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
+    print("start FASTR")
+    fastrOnBiotexResult(biotexResultDir, fastrVariants)
+    print("start Merge")
+    mergeBiotex(biotexResultDir, mergeResultDir)
+    print("start Ranked merge")
     rankMergeResult(mergeResultDir)
     print("end")
