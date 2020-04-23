@@ -145,9 +145,8 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
                         if i > 0:
                             # E5 : don't remove variant but flag them
                             # df.drop(id.index, inplace=True)
-                            df.loc[id.index]['fastr'] = term
+                            df.loc[id.index, 'fastr'] = term
                         i += 1
-            # print(biotexResultDirParam.joinpath("faster"+file.name))
             df.to_csv(biotexResultDirParam.joinpath("fastr"+file.name))
 
 
@@ -159,10 +158,10 @@ if __name__ == '__main__':
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
     fastrVariants = \
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
-    # print("start FASTR")
-    # fastrOnBiotexResult(biotexResultDir, fastrVariants)
-    # print("start Merge")
-    # mergeBiotex(biotexResultDir, mergeResultDir)
+    print("start FASTR")
+    fastrOnBiotexResult(biotexResultDir, fastrVariants)
+    print("start Merge")
+    mergeBiotex(biotexResultDir, mergeResultDir)
     print("start Ranked merge")
     rankMergeResult(mergeResultDir)
     print("end")

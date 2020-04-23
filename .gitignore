@@ -29,3 +29,6 @@ venv
 
 # IDE 
 .idea
+
+# HIICS backlog
+hiics
