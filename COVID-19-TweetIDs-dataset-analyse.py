@@ -187,8 +187,8 @@ if __name__ == '__main__':
     ## Stat on location
     geoJsonfile = 'COVID19_echen_geo_data.json'
     tweetLocationExtract(geoJsonfile)
-    # geodata = gpd.read_file(geoJsonfile)
-    # geodata.plot()
+    geodata = gpd.read_file(geoJsonfile)
+    geodata.plot()
 
 
     print("end")
