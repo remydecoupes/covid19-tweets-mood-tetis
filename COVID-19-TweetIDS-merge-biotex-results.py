@@ -11,7 +11,7 @@ biotexparams = ['ftfidfc-all', 'ftfidfc-multi', 'c-value-all', 'c-value-multi']
 
 
 def mergeBiotex(biotexResultDir, mergeResultDir):
-    columnsName = ['term', 'max', 'sum', 'occurence', 'average', 'ulms']
+    columnsName = ['term', 'max', 'sum', 'occurence', 'average', 'umls']
     for param in biotexparams:
         dfTerms = pd.DataFrame(columns=columnsName)
         i = 0
@@ -19,7 +19,7 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
         for file in biotexResultDirParam.glob("fastr*"):
             i += 1
             dfToMerge = pd.read_csv(file, sep=',')
-            dfToMerge.columns = [i, 'term','ulms'+str(i), 'score'+str(i)]
+            dfToMerge.columns = [i, 'term','umls'+str(i), 'score'+str(i)]
             dfTerms = dfTerms.merge(dfToMerge, on='term', how='outer') # outer : union of keys from both frames,
                 # similar to a SQL full outer join; sort keys lexicographically.
                 # Default is inner : intersection
@@ -31,11 +31,11 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
             dfTerms['occurence'].fillna(0, inplace=True) # transform NA to 0
             dfTerms.loc[dfTerms['term'].isin(dfToMerge['term']), 'occurence'] += 1
             dfTerms["average"] = dfTerms["sum"] / dfTerms['occurence']
-            ## ULMS
-            dfTerms['ulms'+str(i)] = dfTerms['ulms'+str(i)].astype(bool)
-            dfTerms["ulms"] = dfTerms["ulms"] | dfTerms['ulms'+str(i)]
+            ## umls
+            dfTerms['umls'+str(i)] = dfTerms['umls'+str(i)].astype(bool)
+            dfTerms["umls"] = dfTerms["umls"] | dfTerms['umls'+str(i)]
             # delete row after aggregation
-            dfTerms = dfTerms.drop([i, 'score'+str(i), 'ulms'+str(i)], 1) # ,1 : axis : column
+            dfTerms = dfTerms.drop([i, 'score'+str(i), 'umls'+str(i)], 1) # ,1 : axis : column
         dfTerms.to_csv(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv"))
         print("save file: "+str(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv")))
         #faire les sort : max, average et sum
@@ -67,6 +67,11 @@ def rankMergeResult(mergeResultDir):
     :param mergeResultDir:
     :return:
     """
+    # Comment since E1
+    # column_order = ['ftfidfc-multi_max', 'ftfidfc-all_max', 'ftfidfc-multi_average', 'ftfidfc-all_average',
+    #                 'ftfidfc-multi_sum', 'ftfidfc-all_sum', 'c-value-multi_max', 'c-value-all_max',
+    #                 'c-value-multi_average', 'c-value-all_average', 'c-value-multi_sum', 'c-value-all_sum']
+    # End of comment since E1
     # E6 measure : AVG
     # rankedMeasures = ['max', 'sum', 'average']
     # column_order = ['ftfidfc-all_max', 'ftfidfc-all_mutltiExtracted_max', 'ftfidfc-all_average',
@@ -74,8 +79,9 @@ def rankMergeResult(mergeResultDir):
     #                 'c-value-all_max', 'c-value-all_mutltiExtracted_max', 'c-value-all_average',
     #                 'c-value-all_mutltiExtracted_average', 'c-value-all_sum', 'c-value-all_mutltiExtracted_sum']
     rankedMeasures = ['average']
-    column_order = ['ftfidfc-all_average', 'ftfidfc-all_mutltiExtracted_average', 'c-value-all_average',
-                    'c-value-all_mutltiExtracted_average']
+    column_order = ['ftfidfc-all_average', 'ftfidfc-all_average_UMLS','ftfidfc-all_mutltiExtracted_average',
+                    'ftfidfc-all_mutltiExtracted_average_UMLS', 'c-value-all_average', 'c-value-all_average_UMLS',
+                    'c-value-all_mutltiExtracted_average', 'c-value-all_mutltiExtracted_average_UMLS']
     dfcompare = pd.DataFrame()
     nbTerms = 100
 
@@ -89,21 +95,22 @@ def rankMergeResult(mergeResultDir):
             # and the new ranking measure (Max, sum, average) introduce by this function
             dfcompare[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") + "_" + measure] = \
                 df['term'].values
+            # add UMLS
+            dfcompare[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") + "_" + measure +
+                      '_UMLS']= df['umls'].values
+
             # Start E3 : extract multi terms from other
             dfextractMulti = pd.DataFrame()
-            # build a new column with only multi terms (terms which contains a space " ")
+            ## build a new column with only multi terms (terms which contains a space " ")
             dfextractMulti[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") +
                       "_mutltiExtracted_"+ measure] = df[df['term'].str.contains(" ")]['term'].values
-            # Then concate with the previous. We could not add the column because of his inferior length
-            #dfcompare = pd.concat([dfcompare, dfextractMulti], ignore_index=True, axis=1)
+            ## builc column for UMLS
+            dfextractMulti[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") +
+                           "_mutltiExtracted_" + measure + '_UMLS'] = df[df['term'].str.contains(" ")]['umls'].values
+            ## Then concate with the previous. We could not add the column because of his inferior length
             dfcompare = pd.concat([dfcompare, dfextractMulti], axis=1)
             # end of E3
 
-    # Comment since E1
-    # column_order = ['ftfidfc-multi_max', 'ftfidfc-all_max', 'ftfidfc-multi_average', 'ftfidfc-all_average',
-    #                 'ftfidfc-multi_sum', 'ftfidfc-all_sum', 'c-value-multi_max', 'c-value-all_max',
-    #                 'c-value-multi_average', 'c-value-all_average', 'c-value-multi_sum', 'c-value-all_sum']
-    # End of comment since E1
     dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir) + "/compareparam.csv")
 
 
@@ -126,7 +133,7 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
         biotexResultDirParam = biotexResultDir.joinpath(param)
         for file in biotexResultDirParam.glob("biotex*"):
             df = pd.read_csv(file, sep='\t')
-            df.columns = ['term', 'ulms', 'score']
+            df.columns = ['term', 'umls', 'score']
             df['fastr'] = ""
             #print(file.name)
             ## browse on variant
@@ -152,10 +159,10 @@ if __name__ == '__main__':
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
     fastrVariants = \
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
-    print("start FASTR")
-    fastrOnBiotexResult(biotexResultDir, fastrVariants)
+    # print("start FASTR")
+    # fastrOnBiotexResult(biotexResultDir, fastrVariants)
     # print("start Merge")
     # mergeBiotex(biotexResultDir, mergeResultDir)
-    # print("start Ranked merge")
-    # rankMergeResult(mergeResultDir)
+    print("start Ranked merge")
+    rankMergeResult(mergeResultDir)
     print("end")
