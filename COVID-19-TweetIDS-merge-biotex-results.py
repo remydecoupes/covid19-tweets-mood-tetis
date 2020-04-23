@@ -63,10 +63,19 @@ def rankMergeResult(mergeResultDir):
         - E1 : After meeting 2020-04-15 : we decided to give up on multi-term and work only on all (as biotex params)
         - E2 : Clean up results from biotex (remove #######end#####)
         - E3 : Corroborate with E1 : extract multi terms from E1 (with all as biotex params)
+        - E6 : Measur post ranking : AVG
     :param mergeResultDir:
     :return:
     """
-    rankedMeasures = ['max', 'sum', 'average']
+    # E6 measure : AVG
+    # rankedMeasures = ['max', 'sum', 'average']
+    # column_order = ['ftfidfc-all_max', 'ftfidfc-all_mutltiExtracted_max', 'ftfidfc-all_average',
+    #                 'ftfidfc-all_mutltiExtracted_average', 'ftfidfc-all_sum', 'ftfidfc-all_mutltiExtracted_sum',
+    #                 'c-value-all_max', 'c-value-all_mutltiExtracted_max', 'c-value-all_average',
+    #                 'c-value-all_mutltiExtracted_average', 'c-value-all_sum', 'c-value-all_mutltiExtracted_sum']
+    rankedMeasures = ['average']
+    column_order = ['ftfidfc-all_average', 'ftfidfc-all_mutltiExtracted_average', 'c-value-all_average',
+                    'c-value-all_mutltiExtracted_average']
     dfcompare = pd.DataFrame()
     nbTerms = 100
 
@@ -95,18 +104,15 @@ def rankMergeResult(mergeResultDir):
     #                 'ftfidfc-multi_sum', 'ftfidfc-all_sum', 'c-value-multi_max', 'c-value-all_max',
     #                 'c-value-multi_average', 'c-value-all_average', 'c-value-multi_sum', 'c-value-all_sum']
     # End of comment since E1
-    column_order = ['ftfidfc-all_max', 'ftfidfc-all_mutltiExtracted_max', 'ftfidfc-all_average',
-                    'ftfidfc-all_mutltiExtracted_average', 'ftfidfc-all_sum', 'ftfidfc-all_mutltiExtracted_sum',
-                    'c-value-all_max', 'c-value-all_mutltiExtracted_max', 'c-value-all_average',
-                    'c-value-all_mutltiExtracted_average', 'c-value-all_sum', 'c-value-all_mutltiExtracted_sum']
     dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir) + "/compareparam.csv")
 
 
 
 def fastrOnBiotexResult(biotexResultDir,fastrvariants):
     """
-    - E4 : remove Fastr variants terms : Except for the 1rst term, delete all variants fast
-        terms from biotex ranking
+    - Wrong : E4 : remove Fastr variants terms : Except for the 1rst term, delete all variants fast
+        terms from biotex ranking => Wrong
+    - E5 : don't remove variants but flag them with their commun term
     Save files with fastr
     :param biotexResultDir: biotex results
     :param fastrvariants: files containing variants from FASTR algo corresponding to this corpus
@@ -121,15 +127,18 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
         for file in biotexResultDirParam.glob("biotex*"):
             df = pd.read_csv(file, sep='\t')
             df.columns = ['term', 'ulms', 'score']
+            df['fastr'] = ""
             #print(file.name)
             ## browse on variant
             for term in fastr:
                 i = 0
                 for variant in fastr[term][0]:
-                    indexToRemove = df[df['term'] == variant]
-                    if not indexToRemove.empty:
+                    id = df[df['term'] == variant]
+                    if not id.empty:
                         if i > 0:
-                            df.drop(indexToRemove.index, inplace=True)
+                            # E5 : don't remove variant but flag them
+                            # df.drop(id.index, inplace=True)
+                            df.loc[id.index]['fastr'] = term
                         i += 1
             # print(biotexResultDirParam.joinpath("faster"+file.name))
             df.to_csv(biotexResultDirParam.joinpath("fastr"+file.name))
@@ -145,8 +154,8 @@ if __name__ == '__main__':
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
     print("start FASTR")
     fastrOnBiotexResult(biotexResultDir, fastrVariants)
-    print("start Merge")
-    mergeBiotex(biotexResultDir, mergeResultDir)
-    print("start Ranked merge")
-    rankMergeResult(mergeResultDir)
+    # print("start Merge")
+    # mergeBiotex(biotexResultDir, mergeResultDir)
+    # print("start Ranked merge")
+    # rankMergeResult(mergeResultDir)
     print("end")
