@@ -11,7 +11,7 @@ biotexparams = ['ftfidfc-all', 'ftfidfc-multi', 'c-value-all', 'c-value-multi']
 
 
 def mergeBiotex(biotexResultDir, mergeResultDir):
-    columnsName = ['term', 'max', 'sum', 'occurence', 'average', 'umls']
+    columnsName = ['term', 'max', 'sum', 'occurence', 'average', 'umls', 'fastr']
     for param in biotexparams:
         dfTerms = pd.DataFrame(columns=columnsName)
         i = 0
@@ -19,7 +19,7 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
         for file in biotexResultDirParam.glob("fastr*"):
             i += 1
             dfToMerge = pd.read_csv(file, sep=',')
-            dfToMerge.columns = [i, 'term','umls'+str(i), 'score'+str(i)]
+            dfToMerge.columns = [i, 'term','umls'+str(i), 'score'+str(i), 'fastr'+str(i)]
             dfTerms = dfTerms.merge(dfToMerge, on='term', how='outer') # outer : union of keys from both frames,
                 # similar to a SQL full outer join; sort keys lexicographically.
                 # Default is inner : intersection
@@ -34,8 +34,11 @@ def mergeBiotex(biotexResultDir, mergeResultDir):
             ## umls
             dfTerms['umls'+str(i)] = dfTerms['umls'+str(i)].astype(bool)
             dfTerms["umls"] = dfTerms["umls"] | dfTerms['umls'+str(i)]
+            ## fastr
+            ### tricky tip: replace empty value from fastr by values of fastr-i (some are still empty! Doesn't matter!)
+            dfTerms['fastr'].fillna(dfTerms['fastr'+str(i)], inplace=True)
             # delete row after aggregation
-            dfTerms = dfTerms.drop([i, 'score'+str(i), 'umls'+str(i)], 1) # ,1 : axis : column
+            dfTerms = dfTerms.drop([i, 'score'+str(i), 'umls'+str(i), 'fastr'+str(i)], 1) # ,1 : axis : column
         dfTerms.to_csv(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv"))
         print("save file: "+str(mergeResultDir.joinpath("merge30ktweets-english-"+param+".csv")))
         #faire les sort : max, average et sum
@@ -79,9 +82,11 @@ def rankMergeResult(mergeResultDir):
     #                 'c-value-all_max', 'c-value-all_mutltiExtracted_max', 'c-value-all_average',
     #                 'c-value-all_mutltiExtracted_average', 'c-value-all_sum', 'c-value-all_mutltiExtracted_sum']
     rankedMeasures = ['average']
-    column_order = ['ftfidfc-all_average', 'ftfidfc-all_average_UMLS','ftfidfc-all_mutltiExtracted_average',
-                    'ftfidfc-all_mutltiExtracted_average_UMLS', 'c-value-all_average', 'c-value-all_average_UMLS',
-                    'c-value-all_mutltiExtracted_average', 'c-value-all_mutltiExtracted_average_UMLS']
+    column_order = ['ftfidfc-all_average', 'ftfidfc-all_average_UMLS', 'ftfidfc-all_average_fastr',
+                    'ftfidfc-all_mutltiExtracted_average', 'ftfidfc-all_mutltiExtracted_average_UMLS',
+                    'ftfidfc-all_mutltiExtracted_average_fastr', 'c-value-all_average', 'c-value-all_average_UMLS',
+                    'c-value-all_average_fastr', 'c-value-all_mutltiExtracted_average',
+                    'c-value-all_mutltiExtracted_average_UMLS', 'c-value-all_mutltiExtracted_average_fastr']
     dfcompare = pd.DataFrame()
     nbTerms = 100
 
@@ -98,6 +103,9 @@ def rankMergeResult(mergeResultDir):
             # add UMLS
             dfcompare[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") + "_" + measure +
                       '_UMLS']= df['umls'].values
+            # add Fastr
+            dfcompare[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") + "_" + measure +
+                      '_fastr'] = df['fastr'].values
 
             # Start E3 : extract multi terms from other
             dfextractMulti = pd.DataFrame()
@@ -107,6 +115,9 @@ def rankMergeResult(mergeResultDir):
             ## builc column for UMLS
             dfextractMulti[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") +
                            "_mutltiExtracted_" + measure + '_UMLS'] = df[df['term'].str.contains(" ")]['umls'].values
+            ## builc column for fastr
+            dfextractMulti[str(file.name).replace("merge30ktweets-english-", "").replace(".csv", "") +
+                           "_mutltiExtracted_" + measure + '_fastr'] = df[df['term'].str.contains(" ")]['fastr'].values
             ## Then concate with the previous. We could not add the column because of his inferior length
             dfcompare = pd.concat([dfcompare, dfextractMulti], axis=1)
             # end of E3
