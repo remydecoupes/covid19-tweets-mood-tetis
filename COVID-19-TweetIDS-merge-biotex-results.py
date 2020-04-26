@@ -6,6 +6,14 @@ Merge biotex results from 30k tweets per files
 import pandas as pd
 from pathlib import Path
 import json
+# SentiWordNet
+from nltk.corpus import wordnet as wn
+from nltk.corpus import sentiwordnet as swn
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+from nltk import pos_tag, word_tokenize
+# End Of SentiWordNet
+
+
 
 biotexparams = ['ftfidfc-all', 'ftfidfc-multi', 'c-value-all', 'c-value-multi']
 
@@ -59,7 +67,7 @@ def cleanMergeResult(df):
         #print(df.head(n=20))
     return df
 
-def rankMergeResult(mergeResultDir):
+def rankMergeResult(mergeResultDir, rankedfilename):
     """
     This function rank biotex merged results : MAX, SUM, Average on score from initial biotex
     Modification :
@@ -122,7 +130,8 @@ def rankMergeResult(mergeResultDir):
             dfcompare = pd.concat([dfcompare, dfextractMulti], axis=1)
             # end of E3
 
-    dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir) + "/compareparam.csv")
+    #dfcompare[column_order].head(n=nbTerms).to_csv(str(mergeResultDir) + "/" + rankedfilename)
+    dfcompare[column_order].head(n=nbTerms).to_csv(rankedfilename)
 
 
 
@@ -160,6 +169,87 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
                         i += 1
             df.to_csv(biotexResultDirParam.joinpath("fastr"+file.name))
 
+def sentiwordnet(rankmergeresult, resultfile):
+    """
+    Add a positif or negatif tag to extracted term using WordNet and sentiWordnet
+    Token are tansformed indo their lemma form with WordNet corpus and PoS
+    :param rankmergeresult:
+    :param resultfile:
+    :return:
+    """
+
+    def penn_to_wn(tag):
+        """
+        Convert between the PennTreebank tags to simple Wordnet tags
+        """
+        if tag.startswith('J'):
+            return wn.ADJ
+        elif tag.startswith('N'):
+            return wn.NOUN
+        elif tag.startswith('R'):
+            return wn.ADV
+        elif tag.startswith('V'):
+            return wn.VERB
+        return None
+    # from nltk.stem import WordNetLemmatizer
+    # lemmatizer = WordNetLemmatizer()
+
+    def get_sentiment(word, tag):
+        """
+        From : https://stackoverflow.com/questions/38263039/sentiwordnet-scoring-with-python
+        returns list of pos neg and objective score. But returns empty list if not present in senti wordnet.
+        """
+        wn_tag = penn_to_wn(tag)
+        if wn_tag not in (wn.NOUN, wn.ADJ, wn.ADV):
+            return []
+        # Lemmatization : Canonical lexical form (better -> good, walking -> walk, was -> be)
+        lemmatizer = WordNetLemmatizer()
+        lemma = lemmatizer.lemmatize(word, pos=wn_tag)
+        if not lemma:
+            return []
+        synsets = wn.synsets(word, pos=wn_tag)
+        if not synsets:
+            return []
+        # Take the first sense, the most common
+        synset = synsets[0]
+        swn_synset = swn.senti_synset(synset.name())
+
+        return [swn_synset.pos_score(), swn_synset.neg_score(), swn_synset.obj_score()]
+
+    # ps = PorterStemmer()
+    df = pd.read_csv(rankmergeresult, index_col=0)
+    for columns in df:
+        if not "UMLS" in columns and not "fastr" in columns:
+            sentimentsList = []
+            for term in df[columns]:
+                try:
+                    # for multi-gram we use sum of negativ and positiv socre
+                    sumpolaritypos = 0
+                    sumpolarityneg = 0
+                    for token in word_tokenize(term):
+                        # get sentiment as a tuple (positif, negatif, objectif)
+                        sentiment = get_sentiment(token, pos_tag(word_tokenize(token))[0][1])
+                        sumpolaritypos += sentiment[0]
+                        sumpolarityneg += sentiment[1]
+                    # compute sentiment polarity
+                    if sumpolaritypos > sumpolarityneg:
+                        polarity = "pos"
+                    elif sumpolaritypos == 0 and sumpolarityneg == 0:
+                        polarity = "neutral"
+                    else :
+                        polarity = "neg"
+                except: # for special character
+                    # print(term)
+                    polarity = float('nan')
+                print(term+": "+str(polarity))
+                sentimentsList.append(polarity)
+            df[columns+"_sentiment_polarity"] = pd.Series(sentimentsList)
+
+            # Re-sorted columns order by their names :
+            df = df.reindex(sorted(df.columns), axis=1)
+            # save to file
+            df.to_csv(resultfile, index=False)
+
 
 
 if __name__ == '__main__':
@@ -169,10 +259,14 @@ if __name__ == '__main__':
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
     fastrVariants = \
         Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
-    print("start FASTR")
-    fastrOnBiotexResult(biotexResultDir, fastrVariants)
-    print("start Merge")
-    mergeBiotex(biotexResultDir, mergeResultDir)
-    print("start Ranked merge")
-    rankMergeResult(mergeResultDir)
+    rankedfilename = str(mergeResultDir) + "/compareparam.csv"
+    sentionrankedfilename = str(mergeResultDir) + "/compareparamWithSenti.csv"
+    # print("start FASTR")
+    # fastrOnBiotexResult(biotexResultDir, fastrVariants)
+    # print("start Merge")
+    # mergeBiotex(biotexResultDir, mergeResultDir)
+    # print("start Ranked merge")
+    # rankMergeResult(mergeResultDir, rankedfilename)
+    print("start sentiWornNet")
+    sentiwordnet(rankedfilename, sentionrankedfilename)
     print("end")
