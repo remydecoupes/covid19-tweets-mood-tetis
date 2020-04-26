@@ -241,14 +241,17 @@ def sentiwordnet(rankmergeresult, resultfile):
                 except: # for special character
                     # print(term)
                     polarity = float('nan')
-                print(term+": "+str(polarity))
-                sentimentsList.append(polarity)
+                    sumpolaritypos = float('nan')
+                # sentimentsList.append(polarity)
+                # compute float sentiment : Pos - neg
+                sentimentsList.append(sumpolaritypos - sumpolarityneg)
             df[columns+"_sentiment_polarity"] = pd.Series(sentimentsList)
 
             # Re-sorted columns order by their names :
             df = df.reindex(sorted(df.columns), axis=1)
             # save to file
             df.to_csv(resultfile, index=False)
+            # plot
 
 
 
