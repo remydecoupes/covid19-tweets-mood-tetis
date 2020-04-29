@@ -278,7 +278,8 @@ def sentiwordnet(rankmergeresult, resultfile, mergeResultDir):
             title='Term distribution over lexical sentiment analysis for '+termRelatedtoCol,
             x= 'index',
             ax=ax, # invert x axis from 100 to 1
-            y=col
+            y=col,
+            figsize=(20,10)
         )
         ### Change x label
         axsub.set_xlabel("Rank Position")
@@ -346,8 +347,8 @@ if __name__ == '__main__':
     # mergeBiotex(biotexResultDir, mergeResultDir)
     # print("start Ranked merge")
     # rankMergeResult(mergeResultDir, rankedfilename)
-    # print("start sentiWornNet")
-    # sentiwordnet(rankedfilename, sentionrankedfilename, mergeResultDir)
+    print("start sentiWornNet")
+    sentiwordnet(rankedfilename, sentionrankedfilename, mergeResultDir)
     print("Stat on ranked term")
     statsOnRankedTerm(rankedfilename)
     print("end")
