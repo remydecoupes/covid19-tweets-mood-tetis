@@ -12,6 +12,7 @@ from nltk.corpus import sentiwordnet as swn
 from nltk.stem import PorterStemmer, WordNetLemmatizer
 from nltk import pos_tag, word_tokenize
 # End Of SentiWordNet
+import matplotlib.pyplot as plt
 
 
 
@@ -169,7 +170,7 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
                         i += 1
             df.to_csv(biotexResultDirParam.joinpath("fastr"+file.name))
 
-def sentiwordnet(rankmergeresult, resultfile):
+def sentiwordnet(rankmergeresult, resultfile, mergeResultDir):
     """
     Add a positif or negatif tag to extracted term using WordNet and sentiWordnet
     Token are tansformed indo their lemma form with WordNet corpus and PoS
@@ -247,11 +248,42 @@ def sentiwordnet(rankmergeresult, resultfile):
                 sentimentsList.append(sumpolaritypos - sumpolarityneg)
             df[columns+"_sentiment_polarity"] = pd.Series(sentimentsList)
 
-            # Re-sorted columns order by their names :
-            df = df.reindex(sorted(df.columns), axis=1)
-            # save to file
-            df.to_csv(resultfile, index=False)
-            # plot
+    # Re-sorted columns order by their names :
+    df = df.reindex(sorted(df.columns), axis=1)
+    # save to file
+    df.to_csv(resultfile, index=False)
+    # plot
+    ## Select only senti column
+    senticolumn = [col for col in df.columns if 'sentiment' in col]
+    sentidf = df[senticolumn]
+    ## Create a column with index
+    sentidf.reset_index(inplace=True)
+    for col in senticolumn:
+        ## Modify x axis
+        ax = plt.gca()
+        ### Annote x axis : Give a text (here is our term) for each (x,y) with x : index, y : sentiwordnet value
+        termRelatedtoCol = str(col).replace("_sentiment_polarity","")
+        for i, term in enumerate(df[termRelatedtoCol]):
+            # print(str(sentidf.loc[i]['index'])+", "+str(sentidf.loc[i]['ftfidfc-all_average_sentiment_polarity'])+": "+term)
+            ax.annotate(str(term), (sentidf.loc[i]['index'], sentidf.loc[i][col]),
+                        rotation=45, )
+        ### Inverse order of x axis
+        ax.invert_xaxis()
+        axsub = sentidf.plot(
+            kind='scatter',
+            title='Term distribution over lexical sentiment analysis for '+termRelatedtoCol,
+            x= 'index',
+            ax=ax, # invert x axis from 100 to 1
+            y=col
+        )
+        ### Change x label
+        axsub.set_xlabel("Rank Position")
+        ### Give y axis boudadry to -1, 1 to have the whole scale (and for annotation goes not out the boundaries)
+        axsub.set_ylim(-1,1)
+
+        plt.savefig(str(mergeResultDir) + "/fig_" + col)
+        plt.show()
+
 
 
 
@@ -271,5 +303,5 @@ if __name__ == '__main__':
     # print("start Ranked merge")
     # rankMergeResult(mergeResultDir, rankedfilename)
     print("start sentiWornNet")
-    sentiwordnet(rankedfilename, sentionrankedfilename)
+    sentiwordnet(rankedfilename, sentionrankedfilename, mergeResultDir)
     print("end")
