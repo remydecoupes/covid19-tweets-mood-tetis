@@ -172,10 +172,14 @@ def fastrOnBiotexResult(biotexResultDir,fastrvariants):
 
 def sentiwordnet(rankmergeresult, resultfile, mergeResultDir):
     """
-    Add a positif or negatif tag to extracted term using WordNet and sentiWordnet
+    Add a positif or negatif tag to extracted terms using WordNet and sentiWordnet
     Token are tansformed indo their lemma form with WordNet corpus and PoS
-    :param rankmergeresult:
-    :param resultfile:
+    Only 1rst wordnet meaning are used
+
+    4 Plots are saved corresponding to the F-TFIDF-C & C-value for all and multiterm
+    :param rankmergeresult: file
+    :param resultfile: file to save
+    :param mergeResultDir: rep to save plots
     :return:
     """
 
@@ -284,6 +288,46 @@ def sentiwordnet(rankmergeresult, resultfile, mergeResultDir):
         plt.savefig(str(mergeResultDir) + "/fig_" + col)
         plt.show()
 
+def statsOnRankedTerm(rankedfilename):
+    """
+    Build statistic on ranked terms :
+        - Nb of terms in UMLS for each ranked param (C-value & F-TFIDF for All and multi extracted term)
+        - Commun term between C-value and F-TFIDF-C
+    :param rankedfilename:
+    :return:
+    """
+    df = pd.read_csv(rankedfilename, index_col=0)
+    dfstatNbUMLS = pd.DataFrame()
+    commonTermAll = commonMultiTerm = 0
+    # count UMLS term in ranked term
+    for measure in df:
+        if not "UMLS" in measure and not "fastr" in measure: #only browse on ranked param
+            # count UMLS term in ranked term : sum index where this below condition is true :
+            dfstatNbUMLS[measure] = pd.Series((df[measure+"_UMLS"] == True).sum())
+    # Count Common term
+    try:
+        ## for ALL terms
+        for value in df['ftfidfc-all_average']:
+            if (df['c-value-all_average'] == value).sum():
+                commonTermAll += 1
+        ## for multi terms extracted
+        for value in df['ftfidfc-all_mutltiExtracted_average']:
+            if (df['c-value-all_mutltiExtracted_average'] == value).sum():
+                commonMultiTerm += 1
+    except:
+        print("Likely a trouble with column name")
+        commonTermAll = commonMultiTerm = float('nan')
+    # Print results:
+    print("Terms in UMLS by measure: ")
+    with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        print(dfstatNbUMLS)
+    print("Commun term with C-value and F-TFIDF-C for all terms:")
+    print(commonTermAll)
+    print("Commun term with C-value and F-TFIDF-C for multi terms extracted:")
+    print(commonMultiTerm)
+
+
+
 
 
 
@@ -302,6 +346,8 @@ if __name__ == '__main__':
     # mergeBiotex(biotexResultDir, mergeResultDir)
     # print("start Ranked merge")
     # rankMergeResult(mergeResultDir, rankedfilename)
-    print("start sentiWornNet")
-    sentiwordnet(rankedfilename, sentionrankedfilename, mergeResultDir)
+    # print("start sentiWornNet")
+    # sentiwordnet(rankedfilename, sentionrankedfilename, mergeResultDir)
+    print("Stat on ranked term")
+    statsOnRankedTerm(rankedfilename)
     print("end")
