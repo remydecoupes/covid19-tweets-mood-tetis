@@ -32,3 +32,6 @@ venv
 
 # HIICS backlog
 hiics
+
+# elasticsearch : export of twitter data 
+elasticsearch/analyse/
