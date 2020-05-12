@@ -27,3 +27,12 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     1. [preprocess](COVID-19-TweetIDs-preprocess.py) : cleaning up tweets and building corpus in the biotex syntaxe
     2. [biotex-wrapper](COVID-19-TweetsIDS_biotex_wrapper.py): An automatisation of biotex on 4 settings
     3. [merge biotex results](COVID-19-TweetIDS-merge-biotex-results.py): Due to the size of this corpus, biotex could not be launched on the full corpus. It has to be splitt in 30k tweets. Then results have to be merged and ranked
+    
+## Indexing and using Elasticsearch to explore corpus twitter API metadata
+1. Installation of ELK and plugins :
+    * Install ELK : logstash, elasticsearch and kibana
+    * Install a plugin for logstash to geocode user location (plugin is for using API Rest):
+        sudo /usr/share/logstash/bin/logstash-plugin install logstash-filter-rest
+2. Start indexing in elastic with logstash :
+    * sudo /usr/share/logstash/bin/logstash -f elasticsearch/logstash-config/json.conf
+3. Import into kibana : dashbord from this repository

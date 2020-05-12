@@ -1,5 +1,5 @@
 {
-   "template":"twitter2",
+   "template":"twitter",
    "mappings":{
          "properties":{
             "created_at":{
@@ -31,8 +31,18 @@
                "coerce":true,
                "ignore_malformed":true
             
-		}
-	}
+		},
+            "rest_user_osm.centroid" :{
+               "ignore_malformed": true,
+               "type":"geo_point"
+         },
+            "rest_user_osm.extent" :{
+               "ignore_malformed": true,
+               "coerce":true,
+               "type" : "polygon",
+               "type":"geo_shape"
+         }
+      }
 	}
 }
 
