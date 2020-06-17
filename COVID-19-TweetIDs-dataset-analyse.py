@@ -94,7 +94,7 @@ def plotTweetsAndRT():
     """
     listOfTweetsPerDay = defaultdict()
     startDate = date(2020, 1, 22)
-    enDate = date(2020, 2, 11)
+    enDate = date(2020, 2, 13)
     tweetsHydrateDir = Path('hydrating-and-extracting')
     df = pd.DataFrame(columns=('date', 'tweets', 'retweets'))
     i = 0
@@ -106,12 +106,23 @@ def plotTweetsAndRT():
     plt.style.use('ggplot')
     df.to_csv("dataset-analyse.csv")
 
-    # fig, ax = plt.subplots(figsize=(15, 7))
+    fig, ax = plt.subplots(figsize=(15, 7))
     # ax = df.plot(kind='bar', x='date', y='tweets', color="C2",
     #              title='Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3')
     # df.plot(kind='bar', x='date', y='retweets', ax=ax)
-    df.plot(kind='bar', x='date', y=['tweets', 'retweets'],
-            title='Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3')
+    figure_title = 'Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3'
+    axsub = df.plot(kind='bar',
+            x='date',
+            y=['tweets', 'retweets'],
+            title=figure_title,
+            ax=ax
+    )
+    ### Change x and y label
+    axsub.set_xlabel("Date")
+    axsub.set_ylabel("Number of tweets or retweets")
+
+    ### Raised title otherwise it overlaps on legend
+    plt.title(figure_title, y=1.08)
     plt.savefig('numberOfTweetsPerDayPeriod3.png')
     plt.show()
 
@@ -176,13 +187,13 @@ if __name__ == '__main__':
     print("begin")
     listOfTweetsPerDay = defaultdict()
     startDate = date(2020, 1, 22)
-    enDate = date(2020, 2, 11)
+    enDate = date(2020, 2, 13)
 
     ## Count nb of tweets from github echen
     # plotTweetsFromEchen()
 
     ## Count nb of tweets and retweet from hydrating and extracting
-    # plotTweetsAndRT()
+    plotTweetsAndRT()
 
     ## Stat on location
     geoJsonfile = 'COVID19_echen_geo_data.json'

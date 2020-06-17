@@ -34,4 +34,4 @@ venv
 hiics
 
 # elasticsearch : export of twitter data 
-elasticsearch/analyse/
+elasticsearch/analyse/*.csv
