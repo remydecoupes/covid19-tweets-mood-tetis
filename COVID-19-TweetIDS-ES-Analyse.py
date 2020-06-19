@@ -4,10 +4,12 @@
 analyse Elasticsearch query
 """
 import json
+from pprint import pprint
 from elasticsearch import Elasticsearch, exceptions
 from collections import defaultdict
 import re
 from pathlib import Path
+from datetime import datetime
 
 def avoid10kquerylimitation(result):
     """
@@ -48,10 +50,11 @@ def preprocessTweets(text):
 
 def biotexInputBuilder(tweetsofcity):
     biotexcorpus = []
-    for city in tweetsofcity :
-        print("Build document for city: "+city)
-        document = tweetsofcity[city]
-        # print(document)
+    for city in tweetsofcity:
+        # Get all tweets for a city :
+        listOfTweetsByCity = [tweets['tweet'] for tweets in tweetsofcity[city]]
+        # convert this list in a big string of tweets by city
+        document = '\n'.join(listOfTweetsByCity)
         biotexcorpus.append(document)
         biotexcorpus.append('\n')
         biotexcorpus.append("##########END##########")
@@ -77,14 +80,20 @@ if __name__ == '__main__':
     results = avoid10kquerylimitation(result)
 
     # Initiate a dict for each city append all Tweets content
-    tweetsByCity = defaultdict()
+    tweetsByCityAndDay = defaultdict(list)
     for hits in results:
         # if city properties is available on OSM
         #print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
         if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
-            # print city :
-            # print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"]["city"], indent=4))
-            tweetsByCity[hits["_source"]["rest"]["features"][0]["properties"]["city"]] = \
-                    preprocessTweets(hits["_source"]["full_text"])
-    biotexInputBuilder(tweetsByCity)
+            # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
+            inDate = hits["_source"]["created_at"]
+            parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
+            tweetsByCityAndDay[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
+                {
+                    "tweet": preprocessTweets(hits["_source"]["full_text"]),
+                    "create_at": parseDate
+                }
+            )
+    biotexInputBuilder(tweetsByCityAndDay)
+    pprint(tweetsByCityAndDay)
     print("end")
