@@ -10,6 +10,12 @@ from collections import defaultdict
 import re
 from pathlib import Path
 from datetime import datetime
+# Preprocess terms for TF-IDF
+import numpy as np
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from num2words import num2words
+#end of preprocess
 
 def avoid10kquerylimitation(result):
     """
@@ -49,6 +55,11 @@ def preprocessTweets(text):
     return textclean
 
 def biotexInputBuilder(tweetsofcity):
+    """
+    Build and save a file formated for Biotex analysis
+    :param tweetsofcity: dictionnary of { tweets, created_at }
+    :return: none
+    """
     biotexcorpus = []
     for city in tweetsofcity:
         # Get all tweets for a city :
@@ -68,6 +79,70 @@ def biotexInputBuilder(tweetsofcity):
     f.write(textToSave)
     f.close()
 
+def preprocessTerms(document):
+    """
+    Pre process Terms according to
+    https://towardsdatascience.com/tf-idf-for-document-ranking-from-scratch-in-python-on-real-world-dataset-796d339a4089
+    :param tweet:
+    :return:
+    """
+    def lowercase(t):
+        return np.char.lower(t)
+    def removesinglechar(t):
+        words = word_tokenize(str(t))
+        new_text = ""
+        for w in words:
+            if len(w) > 1:
+                new_text = new_text + " " + w
+        return new_text
+    def removestopwords(t):
+        stop_words = stopwords.words('english')
+        words = word_tokenize(str(t))
+        new_text = ""
+        for w in words:
+            if w not in stop_words:
+                new_text = new_text + " " + w
+        return new_text
+    def removeapostrophe(t):
+        return np.char.replace(t, "'", "")
+    def removepunctuation(t):
+        symbols = "!\"#$%&()*+-./:;<=>?@[\]^_`{|}~\n"
+        for i in range(len(symbols)):
+            data = np.char.replace(t, symbols[i], ' ')
+            data = np.char.replace(t, "  ", " ")
+        data = np.char.replace(t, ',', '')
+        return data
+    def convertnumbers(t):
+        tokens = word_tokenize(str(t))
+        new_text = ""
+        for w in tokens:
+            try:
+                w = num2words(int(w))
+            except:
+                a = 0
+            new_text = new_text + " " + w
+        new_text = np.char.replace(new_text, "-", " ")
+        return new_text
+    doc = lowercase(document)
+    doc = removesinglechar(doc)
+    doc = removestopwords(doc)
+    doc = removeapostrophe(doc)
+    doc = removepunctuation(doc)
+    doc = removesinglechar(doc) # apostrophe create new single char
+    return doc
+
+
+def matrixTFBuilder(tweetsofcity):
+    for city in tweetsofcity:
+        # Get all tweets for a city :
+        listOfTweetsByCity = [tweets['tweet'] for tweets in tweetsofcity[city]]
+        # convert this list in a big string of tweets by city
+        document = '\n'.join(listOfTweetsByCity)
+        # Bag of Words and preprocces
+        bagOfWords = preprocessTerms(document)
+        pprint(bagOfWords)
+        print("\n\n")
+
 if __name__ == '__main__':
     print("begin")
     client = Elasticsearch("http://localhost:9200")
@@ -80,7 +155,7 @@ if __name__ == '__main__':
     results = avoid10kquerylimitation(result)
 
     # Initiate a dict for each city append all Tweets content
-    tweetsByCityAndDay = defaultdict(list)
+    tweetsByCityAndDate = defaultdict(list)
     for hits in results:
         # if city properties is available on OSM
         #print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
@@ -88,12 +163,13 @@ if __name__ == '__main__':
             # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
             inDate = hits["_source"]["created_at"]
             parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
-            tweetsByCityAndDay[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
+            tweetsByCityAndDate[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
                 {
                     "tweet": preprocessTweets(hits["_source"]["full_text"]),
                     "create_at": parseDate
                 }
             )
-    biotexInputBuilder(tweetsByCityAndDay)
-    pprint(tweetsByCityAndDay)
+    # biotexInputBuilder(tweetsByCityAndDate)
+    # pprint(tweetsByCityAndDate)
+    matrixTFBuilder(tweetsByCityAndDate)
     print("end")
