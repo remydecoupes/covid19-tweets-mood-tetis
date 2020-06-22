@@ -36,3 +36,6 @@ hiics
 # elasticsearch : export of twitter data 
 elasticsearch/analyse/*.csv
 elasticsearch/analyse/elastic*
+
+# libreoffice swp
+*.swp

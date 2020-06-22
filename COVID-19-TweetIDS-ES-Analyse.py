@@ -9,13 +9,14 @@ from elasticsearch import Elasticsearch, exceptions
 from collections import defaultdict
 import re
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date, timedelta
 # Preprocess terms for TF-IDF
 import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from num2words import num2words
 #end of preprocess
+import pandas as pd
 
 def avoid10kquerylimitation(result):
     """
@@ -133,18 +134,50 @@ def preprocessTerms(document):
 
 
 def matrixTFBuilder(tweetsofcity):
+    """
+    Create a matrix of :
+        - line : (city,day)
+        - column : terms
+        - value of cells : TF (term frequency)
+    Help found here :
+    https://towardsdatascience.com/natural-language-processing-feature-engineering-using-tf-idf-e8b9d00e7e76
+    :param tweetsofcity:
+    :return:
+    """
+    # initiate matrix of tweets aggregate by day
+    col = ['city', 'day', 'tweetsList']
+    matrixAggDay = pd.DataFrame(columns=col)
+
     for city in tweetsofcity:
-        # Get all tweets for a city :
-        listOfTweetsByCity = [tweets['tweet'] for tweets in tweetsofcity[city]]
-        # convert this list in a big string of tweets by city
-        document = '\n'.join(listOfTweetsByCity)
-        # Bag of Words and preprocces
-        bagOfWords = preprocessTerms(document)
-        pprint(bagOfWords)
-        print("\n\n")
+        # create a table with 2 columns : tweet and created_at for a specific city
+        matrix = pd.DataFrame(tweetsofcity[city])
+        # Aggregate list of tweets by single day for specifics cities
+        ## Loop on days for a city
+        period = matrix['created_at'].dt.date
+        period = period.unique()
+        period.sort()
+        for day in period:
+            # print(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            tweetsOfDayAndCity = {
+                'city': city,
+                'day': day,
+                'tweetsList': document
+            }
+            matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
+    matrixAggDay.to_csv("elasticsearch/analyse/matrixAggDay.csv")
+    #         # Bag of Words and preprocces
+    #         # bagOfWords = preprocessTerms(document).split(" ")[1:] # Hack : remove first element which is a ' '
+    #         bagOfWords = preprocessTerms(document).split(" ")
+    #         # print("###########CITY: "+city+"##############")
+    #         # pprint(bagOfWords)
+    #         oneDocumentByCityAndDate[city+"_"+str(day)] = bagOfWords
+    # # Matrix of occurences of terms
+    # pprint(oneDocumentByCityAndDate)
 
 if __name__ == '__main__':
     print("begin")
+    # Elastic search credentials
     client = Elasticsearch("http://localhost:9200")
     index = "twitter"
     # Define a Query : Here get only city from UK
@@ -166,7 +199,7 @@ if __name__ == '__main__':
             tweetsByCityAndDate[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
                 {
                     "tweet": preprocessTweets(hits["_source"]["full_text"]),
-                    "create_at": parseDate
+                    "created_at": parseDate
                 }
             )
     # biotexInputBuilder(tweetsByCityAndDate)
