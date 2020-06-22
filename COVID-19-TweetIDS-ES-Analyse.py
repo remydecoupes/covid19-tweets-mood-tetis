@@ -145,7 +145,7 @@ def matrixTFBuilder(tweetsofcity):
     :return:
     """
     # initiate matrix of tweets aggregate by day
-    col = ['city', 'day', 'tweetsList']
+    col = ['city', 'day', 'tweetsList', 'bow']
     matrixAggDay = pd.DataFrame(columns=col)
 
     for city in tweetsofcity:
@@ -157,23 +157,50 @@ def matrixTFBuilder(tweetsofcity):
         period = period.unique()
         period.sort()
         for day in period:
-            # print(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            # aggregate city and date document
             document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            # Bag of Words and preprocces
+            bagOfWords = preprocessTerms(document).split(" ")
             tweetsOfDayAndCity = {
                 'city': city,
                 'day': day,
-                'tweetsList': document
+                'tweetsList': document,
+                'bow': bagOfWords
             }
             matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
     matrixAggDay.to_csv("elasticsearch/analyse/matrixAggDay.csv")
-    #         # Bag of Words and preprocces
-    #         # bagOfWords = preprocessTerms(document).split(" ")[1:] # Hack : remove first element which is a ' '
-    #         bagOfWords = preprocessTerms(document).split(" ")
-    #         # print("###########CITY: "+city+"##############")
-    #         # pprint(bagOfWords)
-    #         oneDocumentByCityAndDate[city+"_"+str(day)] = bagOfWords
-    # # Matrix of occurences of terms
-    # pprint(oneDocumentByCityAndDate)
+
+    # Create Term matrix
+    ## Find unique word :
+    uniqueTerms = ()
+    i = 0
+    for cityday in matrixAggDay['bow']:
+        if i > 0:
+            # uniqueTerms = list(set(cityday.strip('][').split(', ')) | set(uniqueTerms))
+            uniqueTerms = list(set(cityday) | set(uniqueTerms))
+        else:
+            # For 1rst document
+            # tip : strip : convert string into list because BoW are in type string  when import with pd.read_csv() :
+            # uniqueTerms = cityday.strip('][').split(', ')
+            uniqueTerms = cityday
+        i += 1
+    uniqueTerms.sort()
+    ## create matrix
+    col = ['city_day']
+    col.extend(uniqueTerms)
+    matrixTF = pd.DataFrame(columns=col)
+    for index, cityday in matrixAggDay.iterrows():
+        numOfWords = dict.fromkeys(uniqueTerms, 0)
+        print(type(cityday['bow']))
+        for word in cityday['bow']:
+            numOfWords[word] += 1
+        row = [str(cityday['city'])+"_"+str(cityday['day'])]
+        row.extend(numOfWords.values())
+        matrixTF.append(row)
+    matrixTF.to_csv("elasticsearch/analyse/matrixTF.csv")
+
+
+
 
 if __name__ == '__main__':
     print("begin")
