@@ -39,3 +39,4 @@ elasticsearch/analyse/elastic*
 
 # libreoffice swp
 *.swp
+.~lock*

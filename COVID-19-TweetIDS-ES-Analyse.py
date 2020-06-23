@@ -141,6 +141,7 @@ def matrixTFBuilder(tweetsofcity):
         - column : terms
         - value of cells : TF (term frequency)
     Help found here :
+    http://www.xavierdupre.fr/app/papierstat/helpsphinx/notebooks/artificiel_tokenize_features.html
     https://towardsdatascience.com/natural-language-processing-feature-engineering-using-tf-idf-e8b9d00e7e76
     :param tweetsofcity:
     :return:
@@ -183,15 +184,13 @@ def matrixTFBuilder(tweetsofcity):
     ## get terms :
     voc = cd.vocabulary_
     listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
-    ## label columns
+    ## initiate matrix with count for each terms
     matrixTF = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
-    ## insert row
-    # i=0
-    # for index, cityday in matrixAggDay.iterrows():
-    #     row = [str(cityday['city'])+"_"+str(cityday['day'])]
-    #     row.extend(countTerms[i])
-    #     matrixTF.append(row)
-    #     i += 1
+    ## compute TF : for each doc, devide count by Sum of all count
+    ### Sum fo all count by row
+    matrixTF['sumCount'] = matrixTF.sum(axis=1)
+    ### Devide each cell by these sums
+    matrixTF = matrixTF.loc[:, listOfTerms].div(matrixTF['sumCount'], axis=0)
 
     print(matrixTF)
     matrixTF.to_csv("elasticsearch/analyse/matrixTF.csv")
