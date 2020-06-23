@@ -17,6 +17,7 @@ from nltk.tokenize import word_tokenize
 from num2words import num2words
 #end of preprocess
 import pandas as pd
+from sklearn.feature_extraction.text import CountVectorizer
 
 def avoid10kquerylimitation(result):
     """
@@ -145,8 +146,10 @@ def matrixTFBuilder(tweetsofcity):
     :return:
     """
     # initiate matrix of tweets aggregate by day
-    col = ['city', 'day', 'tweetsList', 'bow']
+    #col = ['city', 'day', 'tweetsList', 'bow']
+    col = ['city', 'day', 'tweetsList']
     matrixAggDay = pd.DataFrame(columns=col)
+    cityDayList = []
 
     for city in tweetsofcity:
         # create a table with 2 columns : tweet and created_at for a specific city
@@ -160,43 +163,37 @@ def matrixTFBuilder(tweetsofcity):
             # aggregate city and date document
             document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
             # Bag of Words and preprocces
-            bagOfWords = preprocessTerms(document).split(" ")
+            # bagOfWords = preprocessTerms(document).split(" ")
             tweetsOfDayAndCity = {
                 'city': city,
                 'day': day,
                 'tweetsList': document,
-                'bow': bagOfWords
+            #    'bow': bagOfWords
             }
+            cityDayList.append(city+"_"+str(day))
             matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
     matrixAggDay.to_csv("elasticsearch/analyse/matrixAggDay.csv")
 
-    # Create Term matrix
-    ## Find unique word :
-    uniqueTerms = ()
-    i = 0
-    for cityday in matrixAggDay['bow']:
-        if i > 0:
-            # uniqueTerms = list(set(cityday.strip('][').split(', ')) | set(uniqueTerms))
-            uniqueTerms = list(set(cityday) | set(uniqueTerms))
-        else:
-            # For 1rst document
-            # tip : strip : convert string into list because BoW are in type string  when import with pd.read_csv() :
-            # uniqueTerms = cityday.strip('][').split(', ')
-            uniqueTerms = cityday
-        i += 1
-    uniqueTerms.sort()
-    ## create matrix
-    col = ['city_day']
-    col.extend(uniqueTerms)
-    matrixTF = pd.DataFrame(columns=col)
-    for index, cityday in matrixAggDay.iterrows():
-        numOfWords = dict.fromkeys(uniqueTerms, 0)
-        print(type(cityday['bow']))
-        for word in cityday['bow']:
-            numOfWords[word] += 1
-        row = [str(cityday['city'])+"_"+str(cityday['day'])]
-        row.extend(numOfWords.values())
-        matrixTF.append(row)
+    # Count terms with sci-kit learn
+    cd = CountVectorizer()
+    cd.fit(matrixAggDay['tweetsList'])
+    res = cd.transform(matrixAggDay["tweetsList"])
+    countTerms = res.todense()
+    # create matrix
+    ## get terms :
+    voc = cd.vocabulary_
+    listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
+    ## label columns
+    matrixTF = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
+    ## insert row
+    # i=0
+    # for index, cityday in matrixAggDay.iterrows():
+    #     row = [str(cityday['city'])+"_"+str(cityday['day'])]
+    #     row.extend(countTerms[i])
+    #     matrixTF.append(row)
+    #     i += 1
+
+    print(matrixTF)
     matrixTF.to_csv("elasticsearch/analyse/matrixTF.csv")
 
 
