@@ -23,8 +23,37 @@ from sklearn.feature_extraction.text import CountVectorizer
 spatialLevels = ['city', 'state', 'country']
 temporalLevels = ['day', 'week','month', 'period']
 
+def elasticsearchQuery():
+    # Elastic search credentials
+    client = Elasticsearch("http://localhost:9200")
+    index = "twitter"
+    # Define a Query : Here get only city from UK
+    query = { "query": {    "bool": {      "must": [        {          "match": {            "rest_user_osm.country.keyword": "United Kingdom"          }        },        {          "range": {            "created_at": {              "gte": "Wed Jan 22 00:00:01 +0000 2020"            }          }        }      ]    }  }}
+    result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
 
-def avoid10kquerylimitation(result):
+    # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
+    results = avoid10kquerylimitation(result, client)
+
+    # Initiate a dict for each city append all Tweets content
+    tweetsByCityAndDate = defaultdict(list)
+    for hits in results:
+        # if city properties is available on OSM
+        #print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
+        if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
+            # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
+            inDate = hits["_source"]["created_at"]
+            parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
+            tweetsByCityAndDate[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
+                {
+                    "tweet": preprocessTweets(hits["_source"]["full_text"]),
+                    "created_at": parseDate
+                }
+            )
+    # biotexInputBuilder(tweetsByCityAndDate)
+    # pprint(tweetsByCityAndDate)
+    return tweetsByCityAndDate
+
+def avoid10kquerylimitation(result, client):
     """
     Elasticsearch limit results of query at 10 000. To avoid this limit, we need to paginate results and scroll
     This method append all pages form scroll search
@@ -191,7 +220,6 @@ def matrixOccurenceBuilder(tweetsofcity):
     listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
     ## initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
-    print(matrixOccurence)
     matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
     return matrixOccurence
 
@@ -221,32 +249,9 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
 
 if __name__ == '__main__':
     print("begin")
-    # Elastic search credentials
-    client = Elasticsearch("http://localhost:9200")
-    index = "twitter"
-    # Define a Query : Here get only city from UK
-    query = { "query": {    "bool": {      "must": [        {          "match": {            "rest_user_osm.country.keyword": "United Kingdom"          }        },        {          "range": {            "created_at": {              "gte": "Wed Jan 22 00:00:01 +0000 2020"            }          }        }      ]    }  }}
-    result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
-
-    # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
-    results = avoid10kquerylimitation(result)
-
-    # Initiate a dict for each city append all Tweets content
-    tweetsByCityAndDate = defaultdict(list)
-    for hits in results:
-        # if city properties is available on OSM
-        #print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
-        if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
-            # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
-            inDate = hits["_source"]["created_at"]
-            parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
-            tweetsByCityAndDate[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
-                {
-                    "tweet": preprocessTweets(hits["_source"]["full_text"]),
-                    "created_at": parseDate
-                }
-            )
-    # biotexInputBuilder(tweetsByCityAndDate)
-    # pprint(tweetsByCityAndDate)
+    # Query Elastic Search : From now only on UK (see functions var below)
+    tweetsByCityAndDate = elasticsearchQuery()
+    # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
+    #
     print("end")
