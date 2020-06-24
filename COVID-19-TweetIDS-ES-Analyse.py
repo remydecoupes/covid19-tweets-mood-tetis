@@ -235,12 +235,15 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
         for city in listOfcities:
             ### edit filter if index contains the city (for each city of the list)
             filter += matricOcc.index.str.startswith(str(city)+"_")
-        print(filter)
         matricOcc = matricOcc.loc[filter]
+    ## period
+    if str(period) != 'all': ### we need a filter on date
+        datefilter = np.zeros((1, len(matricOcc.index)), dtype=bool)[0]
+        for date in period:
+            datefilter += matricOcc.index.str.contains(date.strftime('%Y-%m-%d'))
+        matricOcc = matricOcc.loc[datefilter]
     print(matricOcc)
 
-
-    ## period
     # Aggregate by level
     # Compute TF
     """
@@ -251,7 +254,6 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
     listOfTerms = matricOcc.keys()
     matricOcc = matricOcc.loc[:, listOfTerms].div(matricOcc['sumCount'], axis=0)
     """
-    # Compute IDF
     # Save file
 
 
@@ -269,7 +271,11 @@ if __name__ == '__main__':
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
     matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    ### Filter city and period
     listOfCity = ['London', 'Hambleton']
-    TFIDFAdaptative(matricOcc=matrixOccurence, listOfcities=listOfCity)
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    TFIDFAdaptative(matricOcc=matrixOccurence, listOfcities=listOfCity, period=tfidfPeriod)
 
     print("end")
