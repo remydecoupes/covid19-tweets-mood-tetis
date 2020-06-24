@@ -230,17 +230,27 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
     # Extract cities and period
     ## cities
     if listOfcities != 'all': ### we need to filter
-        pass
+        ### Initiate a numpy array of False
+        filter = np.zeros((1, len(matricOcc.index)), dtype=bool)[0]
+        for city in listOfcities:
+            ### edit filter if index contains the city (for each city of the list)
+            filter += matricOcc.index.str.startswith(str(city)+"_")
+        print(filter)
+        matricOcc = matricOcc.loc[filter]
+    print(matricOcc)
+
 
     ## period
     # Aggregate by level
     # Compute TF
+    """
     ## compute TF : for each doc, devide count by Sum of all count
     ### Sum fo all count by row
     matricOcc['sumCount'] = matricOcc.sum(axis=1)
     ### Devide each cell by these sums
     listOfTerms = matricOcc.keys()
     matricOcc = matricOcc.loc[:, listOfTerms].div(matricOcc['sumCount'], axis=0)
+    """
     # Compute IDF
     # Save file
 
@@ -249,9 +259,17 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
 
 if __name__ == '__main__':
     print("begin")
+    # Comment below if you don't want to rebuild matrixOccurence
+    """
     # Query Elastic Search : From now only on UK (see functions var below)
     tweetsByCityAndDate = elasticsearchQuery()
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
-    #
+    """
+    # TF-IDF adaptative
+    ## import matrixOccurence if you don't want to re-build it
+    matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    listOfCity = ['London', 'Hambleton']
+    TFIDFAdaptative(matricOcc=matrixOccurence, listOfcities=listOfCity)
+
     print("end")
