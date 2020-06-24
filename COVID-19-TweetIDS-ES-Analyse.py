@@ -19,6 +19,11 @@ from num2words import num2words
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
+# Global var on Levels on spatial and temporal axis
+spatialLevels = ['city', 'state', 'country']
+temporalLevels = ['day', 'week','month', 'period']
+
+
 def avoid10kquerylimitation(result):
     """
     Elasticsearch limit results of query at 10 000. To avoid this limit, we need to paginate results and scroll
@@ -134,7 +139,7 @@ def preprocessTerms(document):
     return doc
 
 
-def matrixTFBuilder(tweetsofcity):
+def matrixOccurenceBuilder(tweetsofcity):
     """
     Create a matrix of :
         - line : (city,day)
@@ -185,15 +190,31 @@ def matrixTFBuilder(tweetsofcity):
     voc = cd.vocabulary_
     listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
     ## initiate matrix with count for each terms
-    matrixTF = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
+    matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
+    print(matrixOccurence)
+    matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
+    return matrixOccurence
+
+def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+    if spatialLevel not in spatialLevels or temporalLevel not in temporalLevels:
+        print("wrong level, please double check")
+        return 1
+    # Extract cities and period
+    ## cities
+    if listOfcities != 'all': ### we need to filter
+        pass
+
+    ## period
+    # Aggregate by level
+    # Compute TF
     ## compute TF : for each doc, devide count by Sum of all count
     ### Sum fo all count by row
-    matrixTF['sumCount'] = matrixTF.sum(axis=1)
+    matricOcc['sumCount'] = matricOcc.sum(axis=1)
     ### Devide each cell by these sums
-    matrixTF = matrixTF.loc[:, listOfTerms].div(matrixTF['sumCount'], axis=0)
-
-    print(matrixTF)
-    matrixTF.to_csv("elasticsearch/analyse/matrixTF.csv")
+    listOfTerms = matricOcc.keys()
+    matricOcc = matricOcc.loc[:, listOfTerms].div(matricOcc['sumCount'], axis=0)
+    # Compute IDF
+    # Save file
 
 
 
@@ -227,5 +248,5 @@ if __name__ == '__main__':
             )
     # biotexInputBuilder(tweetsByCityAndDate)
     # pprint(tweetsByCityAndDate)
-    matrixTFBuilder(tweetsByCityAndDate)
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
     print("end")
