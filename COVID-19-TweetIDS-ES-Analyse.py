@@ -226,7 +226,7 @@ def matrixOccurenceBuilder(tweetsofcity):
     matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
     return matrixOccurence
 
-def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
     if spatialLevel not in spatialLevels or temporalLevel not in temporalLevels:
         print("wrong level, please double check")
         return 1
@@ -234,47 +234,63 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
     ## cities
     if listOfcities != 'all': ### we need to filter
         ### Initiate a numpy array of False
-        filter = np.zeros((1, len(matricOcc.index)), dtype=bool)[0]
+        filter = np.zeros((1, len(matrixOcc.index)), dtype=bool)[0]
         for city in listOfcities:
             ### edit filter if index contains the city (for each city of the list)
-            filter += matricOcc.index.str.startswith(str(city)+"_")
-        matricOcc = matricOcc.loc[filter]
+            filter += matrixOcc.index.str.startswith(str(city)+"_")
+        matrixOcc = matrixOcc.loc[filter]
     ## period
     if str(period) != 'all': ### we need a filter on date
-        datefilter = np.zeros((1, len(matricOcc.index)), dtype=bool)[0]
+        datefilter = np.zeros((1, len(matrixOcc.index)), dtype=bool)[0]
         for date in period:
-            datefilter += matricOcc.index.str.contains(date.strftime('%Y-%m-%d'))
-        matricOcc = matricOcc.loc[datefilter]
-    print(matricOcc)
+            datefilter += matrixOcc.index.str.contains(date.strftime('%Y-%m-%d'))
+        matrixOcc = matrixOcc.loc[datefilter]
+    print(matrixOcc)
 
     # Aggregate by level
+    ## Create 4 new columns : city, State, Country and date
+    def splitindex(row):
+        return row.split("_")
+    matrixOcc["city"], matrixOcc["state"], matrixOcc["country"], matrixOcc["date"] = \
+        zip(*matrixOcc.index.map(splitindex))
     ## In space
     if spatialLevel == 'city':
         # do nothing
         pass
     elif spatialLevel == 'state':
-        # aggregate by state
-        pass
+        matrixOcc = matrixOcc.groupby("state").sum()
     elif spatialLevel == 'country':
-        pass
-    # Compute TF
-    """
+        matrixOcc = matrixOcc.groupby("country").sum()
+
+    # Compute TF-IDF
     ## compute TF : for each doc, devide count by Sum of all count
     ### Sum fo all count by row
-    matricOcc['sumCount'] = matricOcc.sum(axis=1)
+    matrixOcc['sumCount'] = matrixOcc.sum(axis=1)
     ### Devide each cell by these sums
-    listOfTerms = matricOcc.keys()
-    matricOcc = matricOcc.loc[:, listOfTerms].div(matricOcc['sumCount'], axis=0)
-    """
-    # Save file
+    listOfTerms = matrixOcc.keys()
+    matrixOcc = matrixOcc.loc[:, listOfTerms].div(matrixOcc['sumCount'], axis=0)
+    ## Compute IDF : create a vector of length = nb of termes with IDF value
+    idf = pd.Series(index=matrixOcc.keys(), dtype=float)
+    ### N : nb of doucments <=> nb of rows :
+    N = matrixOcc.shape[0]
+    ### DFt : nb of document that contains the term
+    DFt = matrixOcc.astype(bool).sum(axis=0) # Tip : convert all value in boolean. float O,O will be False, other True
+    #### Not a Number when value 0 because otherwise log is infinite
+    DFt.replace(0, np.nan, inplace=True)
+    ### compute log(N/DFt)
+    idf = np.log(N/DFt)
+    ## compute TF-IDF
+    matrixTFIDF = matrixOcc * idf
 
+    # Save file
+    matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
 
 
 
 if __name__ == '__main__':
     print("begin")
     # Comment below if you don't want to rebuild matrixOccurence
-
+    """
     # Query Elastic Search : From now only on UK (see functions var below)
     tweetsByCityAndDate = elasticsearchQuery()
     # Build a matrix of occurence for each terms in document aggregate by city and day
@@ -284,11 +300,10 @@ if __name__ == '__main__':
     ## import matrixOccurence if you don't want to re-build it
     matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
     ### Filter city and period
-    listOfCity = ['London', 'Hambleton']
+    listOfCity = ['London', 'Glasgow', 'Belfast']
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    TFIDFAdaptative(matricOcc=matrixOccurence, listOfcities=listOfCity, period=tfidfPeriod)
-    """
+    TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
 
     print("end")
