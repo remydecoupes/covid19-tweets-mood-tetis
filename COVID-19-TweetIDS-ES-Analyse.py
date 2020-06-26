@@ -43,7 +43,10 @@ def elasticsearchQuery():
             # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
             inDate = hits["_source"]["created_at"]
             parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
-            tweetsByCityAndDate[hits["_source"]["rest"]["features"][0]["properties"]["city"]].append(
+            cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
+                               str(hits["_source"]["rest"]["features"][0]["properties"]["state"]) + "_" + \
+                               str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+            tweetsByCityAndDate[cityStateCountry].append(
                 {
                     "tweet": preprocessTweets(hits["_source"]["full_text"]),
                     "created_at": parseDate
@@ -245,6 +248,15 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
     print(matricOcc)
 
     # Aggregate by level
+    ## In space
+    if spatialLevel == 'city':
+        # do nothing
+        pass
+    elif spatialLevel == 'state':
+        # aggregate by state
+        pass
+    elif spatialLevel == 'country':
+        pass
     # Compute TF
     """
     ## compute TF : for each doc, devide count by Sum of all count
@@ -262,7 +274,7 @@ def TFIDFAdaptative(matricOcc, listOfcities='all', spatialLevel='city', period='
 if __name__ == '__main__':
     print("begin")
     # Comment below if you don't want to rebuild matrixOccurence
-    """
+
     # Query Elastic Search : From now only on UK (see functions var below)
     tweetsByCityAndDate = elasticsearchQuery()
     # Build a matrix of occurence for each terms in document aggregate by city and day
@@ -277,5 +289,6 @@ if __name__ == '__main__':
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
     TFIDFAdaptative(matricOcc=matrixOccurence, listOfcities=listOfCity, period=tfidfPeriod)
+    """
 
     print("end")
