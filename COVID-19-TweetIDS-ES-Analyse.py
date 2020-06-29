@@ -224,6 +224,12 @@ def matrixOccurenceBuilder(tweetsofcity):
     listOfTerms = cd.get_feature_names()
     ## initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
+    ## Remove stopword
+    for term in matrixOccurence.keys():
+        if term in stopwords.words('english'):
+            del matrixOccurence[term]
+
+    # save to file
     matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
     return matrixOccurence
 
