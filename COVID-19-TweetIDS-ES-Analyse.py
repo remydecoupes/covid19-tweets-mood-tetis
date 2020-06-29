@@ -295,6 +295,13 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     # Save file
     matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
 
+    # Export N biggest TF-IDF score:
+    top_n = 30
+    extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0,top_n))
+    for row in matrixTFIDF.index:
+        extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
+    extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
+
 
 
 if __name__ == '__main__':
