@@ -219,8 +219,9 @@ def matrixOccurenceBuilder(tweetsofcity):
     countTerms = res.todense()
     # create matrix
     ## get terms :
-    voc = cd.vocabulary_
-    listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
+    # voc = cd.vocabulary_
+    # listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
+    listOfTerms = cd.get_feature_names()
     ## initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
     matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
@@ -281,6 +282,9 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     idf = np.log(N/DFt)
     ## compute TF-IDF
     matrixTFIDF = matrixOcc * idf
+    ## remove terms if for all documents value are Nan
+    matrixTFIDF.dropna(axis=1, how='all', inplace=True)
+
 
     # Save file
     matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
@@ -290,17 +294,17 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
 if __name__ == '__main__':
     print("begin")
     # Comment below if you don't want to rebuild matrixOccurence
-    """
     # Query Elastic Search : From now only on UK (see functions var below)
     tweetsByCityAndDate = elasticsearchQuery()
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
-    """
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
+    """
     matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    """
     ### Filter city and period
-    listOfCity = ['London', 'Glasgow', 'Belfast']
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
