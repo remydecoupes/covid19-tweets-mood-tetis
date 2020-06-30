@@ -296,12 +296,30 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
 
     # Export N biggest TF-IDF score:
-    top_n = 30
+    top_n = 100
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0,top_n))
     for row in matrixTFIDF.index:
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
 
+def ldaTFIDFadaptative():
+    """ /!\ for testing only !!!!
+    work for England inside UK at a state level
+    """
+    from gensim import corpora, models
+    import pyLDAvis.gensim
+    d = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    tfidfwords = [d.iloc[0]]
+    dictionnary = corpora.Dictionary(tfidfwords)
+    texts = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv", index_col=1)
+    textfilter = texts.loc[texts.index.str.startswith("London_")]
+    corpus = [dictionnary.doc2bow(text.split()) for text in textfilter.tweetsList]
+    # lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionnary, num_topics=3, update_every=1, chunksize=10000,
+    #                                passes=1)
+    lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionnary, num_topics=6)
+    lda.print_topics()
+    vis = pyLDAvis.gensim.prepare(lda, corpus, dictionnary)
+    pyLDAvis.save_html(vis, "elasticsearch/analyse/lda-tfidf.html")
 
 
 if __name__ == '__main__':
@@ -322,5 +340,7 @@ if __name__ == '__main__':
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
+
+    ldaTFIDFadaptative()
 
     print("end")
