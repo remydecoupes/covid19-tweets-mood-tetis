@@ -302,34 +302,47 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
 
-def ldaTFIDFadaptative(num_topics=6):
+def ldaTFIDFadaptative(listOfcities):
     """ /!\ for testing only !!!!
-    work for England inside UK at a state level
+    Only work if nb of states = nb of cities
+    i.e for UK working on 4 states with their capitals...
     """
     from gensim import corpora, models
     import pyLDAvis.gensim
-    d = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
-    tfidfwords = [d.iloc[0]]
-    dictionary = corpora.Dictionary(tfidfwords)
+    tfidfwords = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     texts = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv", index_col=1)
-    textfilter = texts.loc[texts.index.str.startswith("London_")]
-    corpus = [dictionary.doc2bow(text.split()) for text in textfilter.tweetsList]
-    # lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=3, update_every=1, chunksize=10000,
-    #                                passes=1)
-    lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=num_topics)
-    lda.print_topics()
-    vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
-    pyLDAvis.save_html(vis, "elasticsearch/analyse/lda-tfidf.html")
+    for i, citystate in enumerate(listOfcities):
+        city = str(listOfcities[i].split("_")[0])
+        state = str(listOfcities[i].split("_")[1])
+        print(str(i)+": "+str(state)+" - "+city)
+        #tfidfwords = [tfidfwords.iloc[0]]
+        dictionary = corpora.Dictionary([tfidfwords.loc[state]])
+        textfilter = texts.loc[texts.index.str.startswith(city+"_")]
+        corpus = [dictionary.doc2bow(text.split()) for text in textfilter.tweetsList]
 
-    # Compute coherence score
-    ## Split each row values
-    texts = textfilter.tweetsList.apply(lambda x: x.split()).values
-    ## Coherence measure C_v : Normalised PointWise Mutual Information (NPMI : co-occurence probability)
-    ## i.e degree of semantic similarity between high scoring words in the topic
-    ## and cosine similarity
-    coherence = models.CoherenceModel(model=lda, texts=texts, dictionary=dictionary, coherence='c_v')
-    coherence_result = coherence.get_coherence()
-    return coherence_result
+        # Find the better nb of topics :
+        ## Coherence measure C_v : Normalised PointWise Mutual Information (NPMI : co-occurence probability)
+        ## i.e degree of semantic similarity between high scoring words in the topic
+        ## and cosine similarity
+        nbtopics = range(2, 35)
+        coherenceScore = pd.Series(index=nbtopics, dtype=float)
+        for n in nbtopics:
+            lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=n)
+            # Compute coherence score
+            ## Split each row values
+            textssplit = textfilter.tweetsList.apply(lambda x: x.split()).values
+            coherence = models.CoherenceModel(model=lda, texts=textssplit, dictionary=dictionary, coherence='c_v')
+            coherence_result = coherence.get_coherence()
+            coherenceScore[n] = coherence_result
+            print("level: "+str(state)+" - NB: " + str(n) + " - coherence LDA: " + str(coherenceScore[n]))
+
+        # Relaunch LDA with the best nbtopic
+        nbTopicOptimal = coherenceScore.idxmax()
+        lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=nbTopicOptimal)
+        print(lda.print_topics())
+        vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
+        pyLDAvis.save_html(vis, "elasticsearch/analyse/lda/lda-tfidf_"+str(state)+".html")
+        print("fin boucle")
 
 
 if __name__ == '__main__':
@@ -352,12 +365,7 @@ if __name__ == '__main__':
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
 
     # LDA clustering on TF-IDF adaptative vocabulary
-    nbtopics = range(2, 35)
-    coherenceScore = pd.Series(index=nbtopics, dtype=float)
-    for n in nbtopics:
-        coherenceScore[n] = ldaTFIDFadaptative(n)
-        print("NB: "+str(n)+" - coherence LDA: "+str(coherenceScore[n]))
-    nbTopicOptimal = coherenceScore.idxmax()
-    ldaTFIDFadaptative(nbTopicOptimal)
+    listOfCityState = ['London_England', 'Glasgow_Scotland', 'Belfast_Northern Ireland', 'Cardiff_Wales']
+    ldaTFIDFadaptative(listOfCityState)
 
     print("end")
