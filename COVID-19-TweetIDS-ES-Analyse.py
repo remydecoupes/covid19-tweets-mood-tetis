@@ -15,20 +15,32 @@ import numpy as np
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from num2words import num2words
-#end of preprocess
+# end of preprocess
+# LDA
+from gensim import corpora, models
+import pyLDAvis.gensim
+## print in coloer
+from termcolor import colored
+# end LDA
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
-temporalLevels = ['day', 'week','month', 'period']
+temporalLevels = ['day', 'week', 'month', 'period']
+
 
 def elasticsearchQuery():
+    """
+    Build a ES query  and return a default dict with resuls
+    :return: tweetsByCityAndDate
+    """
     # Elastic search credentials
     client = Elasticsearch("http://localhost:9200")
     index = "twitter"
     # Define a Query : Here get only city from UK
-    query = { "query": {    "bool": {      "must": [        {          "match": {            "rest_user_osm.country.keyword": "United Kingdom"          }        },        {          "range": {            "created_at": {              "gte": "Wed Jan 22 00:00:01 +0000 2020"            }          }        }      ]    }  }}
+    query = {"query": {"bool": {"must": [{"match": {"rest_user_osm.country.keyword": "United Kingdom"}},
+                                         {"range": {"created_at": {"gte": "Wed Jan 22 00:00:01 +0000 2020"}}}]}}}
     result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
 
     # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
@@ -38,7 +50,7 @@ def elasticsearchQuery():
     tweetsByCityAndDate = defaultdict(list)
     for hits in results:
         # if city properties is available on OSM
-        #print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
+        # print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
         if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
             # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
             inDate = hits["_source"]["created_at"]
@@ -55,6 +67,7 @@ def elasticsearchQuery():
     # biotexInputBuilder(tweetsByCityAndDate)
     # pprint(tweetsByCityAndDate)
     return tweetsByCityAndDate
+
 
 def avoid10kquerylimitation(result, client):
     """
@@ -75,6 +88,7 @@ def avoid10kquerylimitation(result, client):
             break
     return results
 
+
 def preprocessTweets(text):
     """
     1 - Clean up tweets text cf : https://medium.com/analytics-vidhya/basic-tweet-preprocessing-method-with-python-56b4e53854a1
@@ -92,6 +106,7 @@ def preprocessTweets(text):
     # remove the # in #hashtag
     textclean = re.sub(r'#([^\s]+)', r'\1', textclean)
     return textclean
+
 
 def biotexInputBuilder(tweetsofcity):
     """
@@ -118,6 +133,7 @@ def biotexInputBuilder(tweetsofcity):
     f.write(textToSave)
     f.close()
 
+
 def preprocessTerms(document):
     """
     Pre process Terms according to
@@ -125,8 +141,10 @@ def preprocessTerms(document):
     :param tweet:
     :return:
     """
+
     def lowercase(t):
         return np.char.lower(t)
+
     def removesinglechar(t):
         words = word_tokenize(str(t))
         new_text = ""
@@ -134,6 +152,7 @@ def preprocessTerms(document):
             if len(w) > 1:
                 new_text = new_text + " " + w
         return new_text
+
     def removestopwords(t):
         stop_words = stopwords.words('english')
         words = word_tokenize(str(t))
@@ -142,8 +161,10 @@ def preprocessTerms(document):
             if w not in stop_words:
                 new_text = new_text + " " + w
         return new_text
+
     def removeapostrophe(t):
         return np.char.replace(t, "'", "")
+
     def removepunctuation(t):
         symbols = "!\"#$%&()*+-./:;<=>?@[\]^_`{|}~\n"
         for i in range(len(symbols)):
@@ -151,6 +172,7 @@ def preprocessTerms(document):
             data = np.char.replace(t, "  ", " ")
         data = np.char.replace(t, ',', '')
         return data
+
     def convertnumbers(t):
         tokens = word_tokenize(str(t))
         new_text = ""
@@ -162,12 +184,13 @@ def preprocessTerms(document):
             new_text = new_text + " " + w
         new_text = np.char.replace(new_text, "-", " ")
         return new_text
+
     doc = lowercase(document)
     doc = removesinglechar(doc)
     doc = removestopwords(doc)
     doc = removeapostrophe(doc)
     doc = removepunctuation(doc)
-    doc = removesinglechar(doc) # apostrophe create new single char
+    doc = removesinglechar(doc)  # apostrophe create new single char
     return doc
 
 
@@ -184,7 +207,7 @@ def matrixOccurenceBuilder(tweetsofcity):
     :return:
     """
     # initiate matrix of tweets aggregate by day
-    #col = ['city', 'day', 'tweetsList', 'bow']
+    # col = ['city', 'day', 'tweetsList', 'bow']
     col = ['city', 'day', 'tweetsList']
     matrixAggDay = pd.DataFrame(columns=col)
     cityDayList = []
@@ -206,9 +229,9 @@ def matrixOccurenceBuilder(tweetsofcity):
                 'city': city,
                 'day': day,
                 'tweetsList': document,
-            #    'bow': bagOfWords
+                #    'bow': bagOfWords
             }
-            cityDayList.append(city+"_"+str(day))
+            cityDayList.append(city + "_" + str(day))
             matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
     matrixAggDay.to_csv("elasticsearch/analyse/matrixAggDay.csv")
 
@@ -233,31 +256,70 @@ def matrixOccurenceBuilder(tweetsofcity):
     matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
     return matrixOccurence
 
-def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+
+def spatiotemporelFilter(matrix, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+    """
+    Filter matrix with list of cities and a period
+
+    :param matrix:
+    :param listOfcities:
+    :param spatialLevel:
+    :param period:
+    :param temporalLevel:
+    :return: matrix filtred
+    """
     if spatialLevel not in spatialLevels or temporalLevel not in temporalLevels:
         print("wrong level, please double check")
         return 1
     # Extract cities and period
     ## cities
-    if listOfcities != 'all': ### we need to filter
+    if listOfcities != 'all':  ### we need to filter
         ### Initiate a numpy array of False
-        filter = np.zeros((1, len(matrixOcc.index)), dtype=bool)[0]
+        filter = np.zeros((1, len(matrix.index)), dtype=bool)[0]
         for city in listOfcities:
             ### edit filter if index contains the city (for each city of the list)
-            filter += matrixOcc.index.str.startswith(str(city)+"_")
-        matrixOcc = matrixOcc.loc[filter]
+            filter += matrix.index.str.startswith(str(city) + "_")
+        matrix = matrix.loc[filter]
     ## period
-    if str(period) != 'all': ### we need a filter on date
-        datefilter = np.zeros((1, len(matrixOcc.index)), dtype=bool)[0]
+    if str(period) != 'all':  ### we need a filter on date
+        datefilter = np.zeros((1, len(matrix.index)), dtype=bool)[0]
         for date in period:
-            datefilter += matrixOcc.index.str.contains(date.strftime('%Y-%m-%d'))
-        matrixOcc = matrixOcc.loc[datefilter]
-    print(matrixOcc)
+            datefilter += matrix.index.str.contains(date.strftime('%Y-%m-%d'))
+        matrix = matrix.loc[datefilter]
+    return matrix
+
+
+def biotexAdaptative(listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+    matrixAggDay = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv")
+    # concat date with city
+    matrixAggDay['city'] = matrixAggDay[['city', 'day']].agg('_'.join, axis=1)
+    del matrixAggDay['day']
+    # change index
+    matrixAggDay.set_index('city', inplace=True)
+    spatiotemporelFilter(matrix=matrixAggDay, listOfcities=listOfcities,
+                                      spatialLevel='state', period=period)
+
+
+
+def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+    """
+    Aggregate on spatial and temporel and then compute TF-IDF
+
+    :param matrixOcc: Matrix with TF already compute
+    :param listOfcities: filter on this cities
+    :param spatialLevel: city / state / country / world
+    :param period: Filter on this period
+    :param temporalLevel: TBD
+    :return:
+    """
+    matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfcities,
+                         spatialLevel='state', period=period)
 
     # Aggregate by level
     ## Create 4 new columns : city, State, Country and date
     def splitindex(row):
         return row.split("_")
+
     matrixOcc["city"], matrixOcc["state"], matrixOcc["country"], matrixOcc["date"] = \
         zip(*matrixOcc.index.map(splitindex))
     ## In space
@@ -281,43 +343,44 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     ### N : nb of doucments <=> nb of rows :
     N = matrixOcc.shape[0]
     ### DFt : nb of document that contains the term
-    DFt = matrixOcc.astype(bool).sum(axis=0) # Tip : convert all value in boolean. float O,O will be False, other True
+    DFt = matrixOcc.astype(bool).sum(axis=0)  # Tip : convert all value in boolean. float O,O will be False, other True
     #### Not a Number when value 0 because otherwise log is infinite
     DFt.replace(0, np.nan, inplace=True)
     ### compute log(N/DFt)
-    idf = np.log(N/DFt)
+    idf = np.log(N / DFt)
     ## compute TF-IDF
     matrixTFIDF = matrixOcc * idf
     ## remove terms if for all documents value are Nan
     matrixTFIDF.dropna(axis=1, how='all', inplace=True)
-
 
     # Save file
     matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
 
     # Export N biggest TF-IDF score:
     top_n = 500
-    extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0,top_n))
+    extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0, top_n))
     for row in matrixTFIDF.index:
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
+
 
 def ldaTFIDFadaptative(listOfcities):
     """ /!\ for testing only !!!!
     Only work if nb of states = nb of cities
     i.e for UK working on 4 states with their capitals...
     """
-    from gensim import corpora, models
-    import pyLDAvis.gensim
+    print(colored("------------------------------------------------------------------------------------------", 'red'))
+    print(colored("                                 - UNDER DEV !!! - ", 'red'))
+    print(colored("------------------------------------------------------------------------------------------", 'red'))
     tfidfwords = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     texts = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv", index_col=1)
     for i, citystate in enumerate(listOfcities):
         city = str(listOfcities[i].split("_")[0])
         state = str(listOfcities[i].split("_")[1])
-        print(str(i)+": "+str(state)+" - "+city)
-        #tfidfwords = [tfidfwords.iloc[0]]
+        # print(str(i) + ": " + str(state) + " - " + city)
+        # tfidfwords = [tfidfwords.iloc[0]]
         dictionary = corpora.Dictionary([tfidfwords.loc[state]])
-        textfilter = texts.loc[texts.index.str.startswith(city+"_")]
+        textfilter = texts.loc[texts.index.str.startswith(city + "_")]
         corpus = [dictionary.doc2bow(text.split()) for text in textfilter.tweetsList]
 
         # Find the better nb of topics :
@@ -334,15 +397,14 @@ def ldaTFIDFadaptative(listOfcities):
             coherence = models.CoherenceModel(model=lda, texts=textssplit, dictionary=dictionary, coherence='c_v')
             coherence_result = coherence.get_coherence()
             coherenceScore[n] = coherence_result
-            print("level: "+str(state)+" - NB: " + str(n) + " - coherence LDA: " + str(coherenceScore[n]))
+            # print("level: " + str(state) + " - NB: " + str(n) + " - coherence LDA: " + str(coherenceScore[n]))
 
         # Relaunch LDA with the best nbtopic
         nbTopicOptimal = coherenceScore.idxmax()
         lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=nbTopicOptimal)
-        print(lda.print_topics())
+        pprint(lda.print_topics())
         vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
-        pyLDAvis.save_html(vis, "elasticsearch/analyse/lda/lda-tfidf_"+str(state)+".html")
-        print("fin boucle")
+        pyLDAvis.save_html(vis, "elasticsearch/analyse/lda/lda-tfidf_" + str(state) + ".html")
 
 
 if __name__ == '__main__':
@@ -362,6 +424,7 @@ if __name__ == '__main__':
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    ## Compute TF-IDF
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
 
     # LDA clustering on TF-IDF adaptative vocabulary
