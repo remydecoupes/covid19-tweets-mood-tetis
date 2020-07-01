@@ -96,7 +96,7 @@ def preprocessTweets(text):
 def biotexInputBuilder(tweetsofcity):
     """
     Build and save a file formated for Biotex analysis
-    :param tweetsofcity: dictionnary of { tweets, created_at }
+    :param tweetsofcity: dictionary of { tweets, created_at }
     :return: none
     """
     biotexcorpus = []
@@ -296,13 +296,13 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
 
     # Export N biggest TF-IDF score:
-    top_n = 100
+    top_n = 500
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0,top_n))
     for row in matrixTFIDF.index:
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
 
-def ldaTFIDFadaptative():
+def ldaTFIDFadaptative(num_topics=6):
     """ /!\ for testing only !!!!
     work for England inside UK at a state level
     """
@@ -310,16 +310,26 @@ def ldaTFIDFadaptative():
     import pyLDAvis.gensim
     d = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     tfidfwords = [d.iloc[0]]
-    dictionnary = corpora.Dictionary(tfidfwords)
+    dictionary = corpora.Dictionary(tfidfwords)
     texts = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv", index_col=1)
     textfilter = texts.loc[texts.index.str.startswith("London_")]
-    corpus = [dictionnary.doc2bow(text.split()) for text in textfilter.tweetsList]
-    # lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionnary, num_topics=3, update_every=1, chunksize=10000,
+    corpus = [dictionary.doc2bow(text.split()) for text in textfilter.tweetsList]
+    # lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=3, update_every=1, chunksize=10000,
     #                                passes=1)
-    lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionnary, num_topics=6)
+    lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=num_topics)
     lda.print_topics()
-    vis = pyLDAvis.gensim.prepare(lda, corpus, dictionnary)
+    vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
     pyLDAvis.save_html(vis, "elasticsearch/analyse/lda-tfidf.html")
+
+    # Compute coherence score
+    ## Split each row values
+    texts = textfilter.tweetsList.apply(lambda x: x.split()).values
+    ## Coherence measure C_v : Normalised PointWise Mutual Information (NPMI : co-occurence probability)
+    ## i.e degree of semantic similarity between high scoring words in the topic
+    ## and cosine similarity
+    coherence = models.CoherenceModel(model=lda, texts=texts, dictionary=dictionary, coherence='c_v')
+    coherence_result = coherence.get_coherence()
+    return coherence_result
 
 
 if __name__ == '__main__':
@@ -341,6 +351,13 @@ if __name__ == '__main__':
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
 
-    ldaTFIDFadaptative()
+    # LDA clustering on TF-IDF adaptative vocabulary
+    nbtopics = range(2, 35)
+    coherenceScore = pd.Series(index=nbtopics, dtype=float)
+    for n in nbtopics:
+        coherenceScore[n] = ldaTFIDFadaptative(n)
+        print("NB: "+str(n)+" - coherence LDA: "+str(coherenceScore[n]))
+    nbTopicOptimal = coherenceScore.idxmax()
+    ldaTFIDFadaptative(nbTopicOptimal)
 
     print("end")
