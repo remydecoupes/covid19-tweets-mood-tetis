@@ -289,15 +289,55 @@ def spatiotemporelFilter(matrix, listOfcities='all', spatialLevel='city', period
     return matrix
 
 
-def biotexAdaptative(listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+def biotexAdaptativeBuilderAdaptative(listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+    """
+    Build a input biotex file well formated at the level wanted by concatenate cities's tweets
+    :param listOfcities:
+    :param spatialLevel:
+    :param period:
+    :param temporalLevel:
+    :return:
+    """
     matrixAggDay = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv")
     # concat date with city
     matrixAggDay['city'] = matrixAggDay[['city', 'day']].agg('_'.join, axis=1)
     del matrixAggDay['day']
-    # change index
+    ## change index
     matrixAggDay.set_index('city', inplace=True)
-    spatiotemporelFilter(matrix=matrixAggDay, listOfcities=listOfcities,
+    matrixFiltred = spatiotemporelFilter(matrix=matrixAggDay, listOfcities=listOfcities,
                          spatialLevel='state', period=period)
+
+    ## Pre-process :Create 4 new columns : city, State, Country and date
+    def splitindex(row):
+        return row.split("_")
+    matrixFiltred["city"], matrixFiltred["state"], matrixFiltred["country"], matrixFiltred["date"] = \
+        zip(*matrixFiltred.index.map(splitindex))
+
+    # Agregate by level
+    if spatialLevel == 'city':
+        # do nothing
+        pass
+    elif spatialLevel == 'state':
+        matrixFiltred = matrixFiltred.groupby('state')['tweetsList'].apply('.\n'.join).reset_index()
+    elif spatialLevel == 'country':
+        matrixFiltred = matrixFiltred.groupby('country')['tweetsList'].apply('.\n'.join).reset_index()
+
+    # Format biotex input file
+    biotexcorpus = []
+    for index, row in matrixFiltred.iterrows():
+        document = row['tweetsList']
+        biotexcorpus.append(document)
+        biotexcorpus.append('\n')
+        biotexcorpus.append("##########END##########")
+        biotexcorpus.append('\n')
+    textToSave = "".join(biotexcorpus)
+    corpusfilename = "elastic-UK-adaptativebiotex"
+    biotexcopruspath = Path('elasticsearch/analyse')
+    biotexCorpusPath = str(biotexcopruspath) + '/' + corpusfilename
+    print("\t saving file : " + str(biotexCorpusPath))
+    f = open(biotexCorpusPath, 'w')
+    f.write(textToSave)
+    f.close()
 
 
 def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
@@ -439,11 +479,18 @@ if __name__ == '__main__':
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+
+    """
     ## Compute TF-IDF
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
 
     # LDA clustering on TF-IDF adaptative vocabulary
     listOfCityState = ['London_England', 'Glasgow_Scotland', 'Belfast_Northern Ireland', 'Cardiff_Wales']
     ldaTFIDFadaptative(listOfCityState)
+    """
+
+    ## Build biotex input for adaptative level state
+    biotexAdaptativeBuilderAdaptative(listOfcities=listOfCity, spatialLevel='state',
+                                      period=tfidfPeriod, temporalLevel='day')
 
     print("end")

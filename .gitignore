@@ -38,6 +38,7 @@ elasticsearch/analyse/*.csv
 elasticsearch/analyse/*.html
 elasticsearch/analyse/elastic*
 elasticsearch/analyse/lda/*
+elasticsearch/analyse/biotexonhiccs/*
 
 # libreoffice swp
 *.swp
