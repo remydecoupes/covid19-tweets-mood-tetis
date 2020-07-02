@@ -297,8 +297,7 @@ def biotexAdaptative(listOfcities='all', spatialLevel='city', period='all', temp
     # change index
     matrixAggDay.set_index('city', inplace=True)
     spatiotemporelFilter(matrix=matrixAggDay, listOfcities=listOfcities,
-                                      spatialLevel='state', period=period)
-
+                         spatialLevel='state', period=period)
 
 
 def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
@@ -313,7 +312,7 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     :return:
     """
     matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfcities,
-                         spatialLevel='state', period=period)
+                                     spatialLevel='state', period=period)
 
     # Aggregate by level
     ## Create 4 new columns : city, State, Country and date
@@ -374,6 +373,7 @@ def ldaTFIDFadaptative(listOfcities):
     print(colored("------------------------------------------------------------------------------------------", 'red'))
     tfidfwords = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     texts = pd.read_csv("elasticsearch/analyse/matrixAggDay.csv", index_col=1)
+    listOfStatesTopics = []
     for i, citystate in enumerate(listOfcities):
         city = str(listOfcities[i].split("_")[0])
         state = str(listOfcities[i].split("_")[1])
@@ -402,9 +402,24 @@ def ldaTFIDFadaptative(listOfcities):
         # Relaunch LDA with the best nbtopic
         nbTopicOptimal = coherenceScore.idxmax()
         lda = models.ldamodel.LdaModel(corpus=corpus, id2word=dictionary, num_topics=nbTopicOptimal)
-        pprint(lda.print_topics())
-        vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
-        pyLDAvis.save_html(vis, "elasticsearch/analyse/lda/lda-tfidf_" + str(state) + ".html")
+        # save and visualisation
+        ## save
+        for topic, listwords in enumerate(lda.show_topics()):
+            stateTopic = {'state': state}
+            ldaOuput = str(listwords).split(" + ")[1:]
+            for i, word in enumerate(ldaOuput):
+                # reformat lda output for each word of topics
+                stateTopic[i] = ''.join(x for x in word if x.isalpha())
+            listOfStatesTopics.append(stateTopic)
+        ## Visualisation
+        try:
+            vis = pyLDAvis.gensim.prepare(lda, corpus, dictionary)
+            pyLDAvis.save_html(vis, "elasticsearch/analyse/lda/lda-tfidf_" + str(state) + ".html")
+        except:
+            print("saving pyLDAvis failed. Nb of topics for " + state + ": " + nbTopicOptimal)
+    # Save file
+    listOfStatesTopicsCSV = pd.DataFrame(listOfStatesTopics)
+    listOfStatesTopicsCSV.to_csv("elasticsearch/analyse/lda/topicBySate.csv")
 
 
 if __name__ == '__main__':

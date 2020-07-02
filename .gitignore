@@ -37,7 +37,7 @@ hiics
 elasticsearch/analyse/*.csv
 elasticsearch/analyse/*.html
 elasticsearch/analyse/elastic*
-elasticsearch/analyse/lda/*.html
+elasticsearch/analyse/lda/*
 
 # libreoffice swp
 *.swp
