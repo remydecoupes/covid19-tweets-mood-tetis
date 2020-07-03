@@ -461,18 +461,64 @@ def ldaTFIDFadaptative(listOfcities):
     listOfStatesTopicsCSV = pd.DataFrame(listOfStatesTopics)
     listOfStatesTopicsCSV.to_csv("elasticsearch/analyse/lda/topicBySate.csv")
 
+def compareBiotexAdaptiveTFIDF(number_of_term):
+    biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
+                         names=['terms', 'UMLS', 'score'], sep=';')
+    atfidf = pd.read_csv('elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv', index_col=0)
+    # Transpose A-TF-IDF (inverse rows and columns)
+    atfidf = atfidf.transpose()
+    # select N first terms
+    atfidf = atfidf[:number_of_term]
+    biotex = biotex[:number_of_term]
+
+
+    # group together all states' terms
+    atfidfUnique = pd.Series(dtype='string')
+    for state in atfidf.keys():
+        atfidfUnique = atfidfUnique.append(atfidf[state], ignore_index=True)
+    ## drop duplicate
+    atfidfUnique.drop_duplicates(inplace=True)
+
+    # merge to see what terms have in common
+    ## convert series into dataframe before merge
+    atfidfUniquedf = atfidfUnique.to_frame().rename(columns= {0: 'terms'})
+    atfidfUniquedf['terms'] = atfidfUnique
+    common = pd.merge(biotex, atfidfUniquedf, left_on='terms', right_on='terms', how='inner')
+    del common['score']
+    common.to_csv("elasticsearch/analyse/biotexonhiccs/common.csv")
+
+    # Get what terms are specific to Adapt-TF-IDF
+    atfidfUniquedf['terms'][~atfidfUniquedf['terms'].isin(biotex['terms'])].dropna()
+    condition = atfidfUniquedf['terms'].isin(biotex['terms'])
+    specificAtfidf = atfidfUniquedf.drop(atfidfUniquedf[condition].index)
+    specificAtfidf.to_csv("elasticsearch/analyse/biotexonhiccs/specific-A-TFIDF.csv")
+
+    # Get what terms are specific to Biotex
+    biotex['terms'][~biotex['terms'].isin(atfidfUniquedf['terms'])].dropna()
+    condition = biotex['terms'].isin(atfidfUniquedf['terms'])
+    specificBiotex = biotex.drop(biotex[condition].index)
+    specificBiotex.to_csv("elasticsearch/analyse/biotexonhiccs/specific-biotex.csv")
+
+    # Print stats
+    percentIncommon = len(common)/len(atfidfUnique)*100
+    percentOfSpecificAtfidf = len(specificAtfidf)/len(atfidfUnique)*100
+    print("Percent in common "+str(percentIncommon))
+    print("Perent of specific at A-TFIDF : "+str(percentOfSpecificAtfidf))
+
 
 if __name__ == '__main__':
     print("begin")
+    """
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
     tweetsByCityAndDate = elasticsearchQuery()
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
+    """
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
     """
-    matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
     """
     ### Filter city and period
     listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
@@ -489,8 +535,12 @@ if __name__ == '__main__':
     ldaTFIDFadaptative(listOfCityState)
     """
 
+    """
     ## Build biotex input for adaptative level state
     biotexAdaptativeBuilderAdaptative(listOfcities=listOfCity, spatialLevel='state',
                                       period=tfidfPeriod, temporalLevel='day')
+    """
+    # Compare Biotex with a-TFIDF
+    compareBiotexAdaptiveTFIDF(200)
 
     print("end")
