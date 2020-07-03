@@ -36,3 +36,5 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
 2. Start indexing in elastic with logstash :
     * sudo /usr/share/logstash/bin/logstash -f elasticsearch/logstash-config/json.conf
 3. Import into kibana : dashbord from this repository
+4. [Query](elasticsearch/analyse/query.md) elasticsearch to extract tweets inside a specific spatio-temporal windows
+5. [Build an adaptive TF-IDF on this extraction of tweets & analyse results](COVID-19-TweetIDS-ES-Analyse.py)
