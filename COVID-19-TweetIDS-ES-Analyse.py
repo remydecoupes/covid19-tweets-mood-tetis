@@ -23,7 +23,7 @@ import pyLDAvis.gensim
 from termcolor import colored
 # end LDA
 import pandas as pd
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -532,7 +532,15 @@ def tfidfNoHierarchical():
     mask = ((matrixAllTweets["date"] >= tfidfPeriod.min()) & (matrixAllTweets["date"] <= tfidfPeriod.max()))
     matrixAllTweets = matrixAllTweets.loc[mask]
 
-
+    # Compute TF-IDF
+    vectorizer = TfidfVectorizer()
+    vectors = vectorizer.fit_transform(matrixAllTweets['tweet'])
+    feature_names = vectorizer.get_feature_names()
+    dense = vectors.todense()
+    denselist = dense.tolist()
+    ## matrixTFIDF
+    TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
+    ## Extract N TOP ranking score
 
 
 
