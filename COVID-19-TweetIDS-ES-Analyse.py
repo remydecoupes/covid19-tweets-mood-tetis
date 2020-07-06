@@ -403,7 +403,7 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
 
 
-def ldaTFIDFadaptative(listOfcities):
+def ldHTFIDFadaptative(listOfcities):
     """ /!\ for testing only !!!!
     Only work if nb of states = nb of cities
     i.e for UK working on 4 states with their capitals...
@@ -464,46 +464,49 @@ def ldaTFIDFadaptative(listOfcities):
 def compareBiotexAdaptiveTFIDF(number_of_term):
     biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
                          names=['terms', 'UMLS', 'score'], sep=';')
-    atfidf = pd.read_csv('elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv', index_col=0)
+    HTFIDF = pd.read_csv('elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv', index_col=0)
     # Transpose A-TF-IDF (inverse rows and columns)
-    atfidf = atfidf.transpose()
+    HTFIDF = HTFIDF.transpose()
     # select N first terms
-    atfidf = atfidf[:number_of_term]
+    HTFIDF = HTFIDF[:number_of_term]
     biotex = biotex[:number_of_term]
 
 
     # group together all states' terms
-    atfidfUnique = pd.Series(dtype='string')
-    for state in atfidf.keys():
-        atfidfUnique = atfidfUnique.append(atfidf[state], ignore_index=True)
+    HTFIDFUnique = pd.Series(dtype='string')
+    for state in HTFIDF.keys():
+        HTFIDFUnique = HTFIDFUnique.append(HTFIDF[state], ignore_index=True)
     ## drop duplicate
-    atfidfUnique.drop_duplicates(inplace=True)
+    HTFIDFUnique.drop_duplicates(inplace=True)
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
-    atfidfUniquedf = atfidfUnique.to_frame().rename(columns= {0: 'terms'})
-    atfidfUniquedf['terms'] = atfidfUnique
-    common = pd.merge(biotex, atfidfUniquedf, left_on='terms', right_on='terms', how='inner')
+    HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns= {0: 'terms'})
+    HTFIDFUniquedf['terms'] = HTFIDFUnique
+    common = pd.merge(biotex, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
     del common['score']
     common.to_csv("elasticsearch/analyse/biotexonhiccs/common.csv")
 
     # Get what terms are specific to Adapt-TF-IDF
-    atfidfUniquedf['terms'][~atfidfUniquedf['terms'].isin(biotex['terms'])].dropna()
-    condition = atfidfUniquedf['terms'].isin(biotex['terms'])
-    specificAtfidf = atfidfUniquedf.drop(atfidfUniquedf[condition].index)
-    specificAtfidf.to_csv("elasticsearch/analyse/biotexonhiccs/specific-A-TFIDF.csv")
+    HTFIDFUniquedf['terms'][~HTFIDFUniquedf['terms'].isin(biotex['terms'])].dropna()
+    condition = HTFIDFUniquedf['terms'].isin(biotex['terms'])
+    specificHTFIDF = HTFIDFUniquedf.drop(HTFIDFUniquedf[condition].index)
+    specificHTFIDF.to_csv("elasticsearch/analyse/biotexonhiccs/specific-A-TFIDF.csv")
 
     # Get what terms are specific to Biotex
-    biotex['terms'][~biotex['terms'].isin(atfidfUniquedf['terms'])].dropna()
-    condition = biotex['terms'].isin(atfidfUniquedf['terms'])
+    biotex['terms'][~biotex['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
+    condition = biotex['terms'].isin(HTFIDFUniquedf['terms'])
     specificBiotex = biotex.drop(biotex[condition].index)
     specificBiotex.to_csv("elasticsearch/analyse/biotexonhiccs/specific-biotex.csv")
 
     # Print stats
-    percentIncommon = len(common)/len(atfidfUnique)*100
-    percentOfSpecificAtfidf = len(specificAtfidf)/len(atfidfUnique)*100
+    percentIncommon = len(common)/len(HTFIDFUnique)*100
+    percentOfSpecificHTFIDF = len(specificHTFIDF)/len(HTFIDFUnique)*100
     print("Percent in common "+str(percentIncommon))
-    print("Perent of specific at A-TFIDF : "+str(percentOfSpecificAtfidf))
+    print("Perent of specific at A-TFIDF : "+str(percentOfSpecificHTFIDF))
+    
+def compareTFWithHTFIDF():
+    pass
 
 
 if __name__ == '__main__':
@@ -532,7 +535,7 @@ if __name__ == '__main__':
 
     # LDA clustering on TF-IDF adaptative vocabulary
     listOfCityState = ['London_England', 'Glasgow_Scotland', 'Belfast_Northern Ireland', 'Cardiff_Wales']
-    ldaTFIDFadaptative(listOfCityState)
+    ldHTFIDFadaptative(listOfCityState)
     """
 
     """
