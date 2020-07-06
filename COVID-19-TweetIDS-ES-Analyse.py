@@ -505,8 +505,35 @@ def compareBiotexAdaptiveTFIDF(number_of_term):
     print("Percent in common "+str(percentIncommon))
     print("Perent of specific at A-TFIDF : "+str(percentOfSpecificHTFIDF))
     
-def compareTFWithHTFIDF():
-    pass
+def tfidfNoHierarchical():
+    """/!\ under dev !!!
+
+    Remove period
+    """
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+
+    # Query Elasticsearch to get all tweets from UK
+    tweets = elasticsearchQuery()
+    # reorganie tweets (dict : tweets by cities) into dataframe (city and date)
+    col = ['tweets', 'created_at']
+    matrixAllTweets = pd.DataFrame(columns=col)
+    for tweetByCity in tweets.keys():
+        # pprint(tweets[tweetByCity])
+        matrix = pd.DataFrame(tweets[tweetByCity])
+        matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+    # NB :  28354 results instead of 44841 (from ES) because we work only on tweets with a city found
+    # Split datetime into date and time
+    matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
+    matrixAllTweets["time"] = [d.time() for d in matrixAllTweets['created_at']]
+
+    # Filter by a period
+    mask = ((matrixAllTweets["date"] >= tfidfPeriod.min()) & (matrixAllTweets["date"] <= tfidfPeriod.max()))
+    matrixAllTweets = matrixAllTweets.loc[mask]
+
+
+
 
 
 if __name__ == '__main__':
