@@ -468,7 +468,6 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     # Transpose A-TF-IDF (inverse rows and columns)
     HTFIDF = HTFIDF.transpose()
     # select N first terms
-    HTFIDF = HTFIDF[:number_of_term]
     dfToCompare = dfToCompare[:number_of_term]
 
 
@@ -478,27 +477,36 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
         HTFIDFUnique = HTFIDFUnique.append(HTFIDF[state], ignore_index=True)
     ## drop duplicate
     HTFIDFUnique = HTFIDFUnique.drop_duplicates()
+    ## select N first terms of H-TFIDF (after stack)
+    HTFIDFUnique = HTFIDFUnique[:number_of_term]
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
     HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns= {0: 'terms'})
     HTFIDFUniquedf['terms'] = HTFIDFUnique
     common = pd.merge(dfToCompare, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
-    del common['score']
+    # del common['score']
     common = common.terms.drop_duplicates()
+    common = common.reset_index()
+    del common['index']
     common.to_csv("elasticsearch/analyse/"+repToSave+"/common.csv")
 
     # Get what terms are specific to Adapt-TF-IDF
+    print(dfToCompare)
     HTFIDFUniquedf['terms'][~HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])].dropna()
     condition = HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])
     specificHTFIDF = HTFIDFUniquedf.drop(HTFIDFUniquedf[condition].index)
+    specificHTFIDF = specificHTFIDF.reset_index()
+    del specificHTFIDF['index']
     specificHTFIDF.to_csv("elasticsearch/analyse/"+repToSave+"/specific-H-TFIDF.csv")
 
     # Get what terms are specific to dfToCompare
     dfToCompare['terms'][~dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
     condition = dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])
     specificdfToCompare = dfToCompare.drop(dfToCompare[condition].index)
-    specificdfToCompare.to_csv("elasticsearch/analyse/"+repToSave+"/specific-biotex.csv")
+    specificdfToCompare = specificdfToCompare.reset_index()
+    del specificdfToCompare['index']
+    specificdfToCompare.to_csv("elasticsearch/analyse/"+repToSave+"/specific-reference.csv")
 
     # Print stats
     percentIncommon = len(common)/len(HTFIDFUnique)*100
@@ -551,7 +559,8 @@ def tfidfClassical():
     extractBiggest = extractBiggest.reset_index(level=[0,1])
     extractBiggest.columns = ['old-index', 'terms', 'score']
     del extractBiggest['old-index']
-    extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
+    extractBiggest = extractBiggest.drop_duplicates(subset='terms', keep="first")
+    # extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
 
     # Compare with H-TFIDF
     repToSave = "TFIDFClassical"
@@ -592,9 +601,14 @@ if __name__ == '__main__':
                                       period=tfidfPeriod, temporalLevel='day')
     """
     # Compare Biotex with H-TFIDF
+    """
     biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
                          names=['terms', 'UMLS', 'score'], sep=';')
     repToSave = "biotexonhiccs"
     compareWithHTFIDF(200, biotex, repToSave)
+    """
+
+    #Compare classical TF-IDF with H-TFIDF
+    tfidfClassical()
 
     print("end")
