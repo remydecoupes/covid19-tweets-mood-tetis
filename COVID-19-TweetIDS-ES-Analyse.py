@@ -555,6 +555,10 @@ def tfidfClassical():
 
     ## matrixTFIDF
     TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
+    ### Remove stopword
+    for term in TFIDFClassical.keys():
+        if term in stopwords.words('english'):
+            del TFIDFClassical[term]
     TFIDFClassical.to_csv("elasticsearch/analyse/TFIDFClassical/tfidfclassical.csv")
 
     ## Extract N TOP ranking score
@@ -570,6 +574,37 @@ def tfidfClassical():
     # Compare with H-TFIDF
     repToSave = "TFIDFClassical"
     compareWithHTFIDF(200, extractBiggest, repToSave)
+
+
+    # Compute TF
+    tf = CountVectorizer()
+    tf.fit(matrixAllTweets['tweet'])
+    tf_res = tf.transform(matrixAllTweets['tweet'])
+    listOfTermsTF = tf.get_feature_names()
+    countTerms = tf_res.todense()
+
+    ## matrixTF
+    TFClassical = pd.DataFrame(countTerms.tolist(), columns=listOfTermsTF)
+    ### Remove stopword
+    for term in TFClassical.keys():
+        if term in stopwords.words('english'):
+            del TFClassical[term]
+    ### save in file
+    TFClassical.to_csv("elasticsearch/analyse/TFlassical/tfclassical.csv")
+
+    ## Extract N TOP ranking score
+    top_n = 500
+    extractBiggestTF = TFClassical.stack().nlargest(top_n)
+    ### Reset index becaus stack create a multi-index (2 level : old index + terms)
+    extractBiggestTF = extractBiggestTF.reset_index(level=[0,1])
+    extractBiggestTF.columns = ['old-index', 'terms', 'score']
+    del extractBiggestTF['old-index']
+    extractBiggestTF = extractBiggest.drop_duplicates(subset='terms', keep="first")
+    # extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
+
+    # Compare with H-TFIDF
+    repToSave = "TFClassical"
+    compareWithHTFIDF(200, extractBiggestTF, repToSave)
 
 if __name__ == '__main__':
     print("begin")
