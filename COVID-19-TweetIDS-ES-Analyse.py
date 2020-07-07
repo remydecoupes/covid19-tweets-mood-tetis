@@ -492,7 +492,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     HTFIDFUniquedf['terms'][~HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])].dropna()
     condition = HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])
     specificHTFIDF = HTFIDFUniquedf.drop(HTFIDFUniquedf[condition].index)
-    specificHTFIDF.to_csv("elasticsearch/analyse/"+repToSave+"/specific-A-TFIDF.csv")
+    specificHTFIDF.to_csv("elasticsearch/analyse/"+repToSave+"/specific-H-TFIDF.csv")
 
     # Get what terms are specific to dfToCompare
     dfToCompare['terms'][~dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
@@ -504,7 +504,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     percentIncommon = len(common)/len(HTFIDFUnique)*100
     percentOfSpecificHTFIDF = len(specificHTFIDF)/len(HTFIDFUnique)*100
     print("Percent in common "+str(percentIncommon))
-    print("Perent of specific at A-TFIDF : "+str(percentOfSpecificHTFIDF))
+    print("Percent of specific at H-TFIDF : "+str(percentOfSpecificHTFIDF))
     
 def tfidfClassical():
     """/!\ under dev !!!
@@ -591,7 +591,7 @@ if __name__ == '__main__':
     biotexAdaptativeBuilderAdaptative(listOfcities=listOfCity, spatialLevel='state',
                                       period=tfidfPeriod, temporalLevel='day')
     """
-    # Compare Biotex with a-TFIDF
+    # Compare Biotex with H-TFIDF
     biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
                          names=['terms', 'UMLS', 'score'], sep=';')
     repToSave = "biotexonhiccs"
