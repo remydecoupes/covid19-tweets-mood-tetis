@@ -461,15 +461,15 @@ def ldHTFIDFadaptative(listOfcities):
     listOfStatesTopicsCSV = pd.DataFrame(listOfStatesTopics)
     listOfStatesTopicsCSV.to_csv("elasticsearch/analyse/lda/topicBySate.csv")
 
-def compareBiotexAdaptiveTFIDF(number_of_term):
-    biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
-                         names=['terms', 'UMLS', 'score'], sep=';')
+def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
+    # biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
+    #                      names=['terms', 'UMLS', 'score'], sep=';')
     HTFIDF = pd.read_csv('elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv', index_col=0)
     # Transpose A-TF-IDF (inverse rows and columns)
     HTFIDF = HTFIDF.transpose()
     # select N first terms
     HTFIDF = HTFIDF[:number_of_term]
-    biotex = biotex[:number_of_term]
+    dfToCompare = dfToCompare[:number_of_term]
 
 
     # group together all states' terms
@@ -483,21 +483,21 @@ def compareBiotexAdaptiveTFIDF(number_of_term):
     ## convert series into dataframe before merge
     HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns= {0: 'terms'})
     HTFIDFUniquedf['terms'] = HTFIDFUnique
-    common = pd.merge(biotex, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
+    common = pd.merge(dfToCompare, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
     del common['score']
-    common.to_csv("elasticsearch/analyse/biotexonhiccs/common.csv")
+    common.to_csv("elasticsearch/analyse/"+repToSave+"/common.csv")
 
     # Get what terms are specific to Adapt-TF-IDF
-    HTFIDFUniquedf['terms'][~HTFIDFUniquedf['terms'].isin(biotex['terms'])].dropna()
-    condition = HTFIDFUniquedf['terms'].isin(biotex['terms'])
+    HTFIDFUniquedf['terms'][~HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])].dropna()
+    condition = HTFIDFUniquedf['terms'].isin(dfToCompare['terms'])
     specificHTFIDF = HTFIDFUniquedf.drop(HTFIDFUniquedf[condition].index)
-    specificHTFIDF.to_csv("elasticsearch/analyse/biotexonhiccs/specific-A-TFIDF.csv")
+    specificHTFIDF.to_csv("elasticsearch/analyse/"+repToSave+"/specific-A-TFIDF.csv")
 
-    # Get what terms are specific to Biotex
-    biotex['terms'][~biotex['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
-    condition = biotex['terms'].isin(HTFIDFUniquedf['terms'])
-    specificBiotex = biotex.drop(biotex[condition].index)
-    specificBiotex.to_csv("elasticsearch/analyse/biotexonhiccs/specific-biotex.csv")
+    # Get what terms are specific to dfToCompare
+    dfToCompare['terms'][~dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
+    condition = dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])
+    specificdfToCompare = dfToCompare.drop(dfToCompare[condition].index)
+    specificdfToCompare.to_csv("elasticsearch/analyse/"+repToSave+"/specific-biotex.csv")
 
     # Print stats
     percentIncommon = len(common)/len(HTFIDFUnique)*100
@@ -505,7 +505,7 @@ def compareBiotexAdaptiveTFIDF(number_of_term):
     print("Percent in common "+str(percentIncommon))
     print("Perent of specific at A-TFIDF : "+str(percentOfSpecificHTFIDF))
     
-def tfidfNoHierarchical():
+def tfidfClassical():
     """/!\ under dev !!!
 
     Remove period
@@ -546,8 +546,15 @@ def tfidfNoHierarchical():
     ## Extract N TOP ranking score
     top_n = 500
     extractBiggest = TFIDFClassical.stack().nlargest(top_n)
+    ### Reset index becaus stack create a multi-index (2 level : old index + terms)
+    extractBiggest = extractBiggest.reset_index(level=[0,1])
+    extractBiggest.columns = ['old-index', 'terms', 'score']
+    del extractBiggest['old-index']
     extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
 
+    # Compare with H-TFIDF
+    repToSave = "TFIDFClassical"
+    compareWithHTFIDF(200, extractBiggest, repToSave)
 
 if __name__ == '__main__':
     print("begin")
@@ -584,6 +591,9 @@ if __name__ == '__main__':
                                       period=tfidfPeriod, temporalLevel='day')
     """
     # Compare Biotex with a-TFIDF
-    compareBiotexAdaptiveTFIDF(200)
+    biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
+                         names=['terms', 'UMLS', 'score'], sep=';')
+    repToSave = "biotexonhiccs"
+    compareWithHTFIDF(200, biotex, repToSave)
 
     print("end")
