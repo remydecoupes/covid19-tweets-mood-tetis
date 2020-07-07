@@ -477,7 +477,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     for state in HTFIDF.keys():
         HTFIDFUnique = HTFIDFUnique.append(HTFIDF[state], ignore_index=True)
     ## drop duplicate
-    HTFIDFUnique.drop_duplicates(inplace=True)
+    HTFIDFUnique = HTFIDFUnique.drop_duplicates()
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
@@ -485,6 +485,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     HTFIDFUniquedf['terms'] = HTFIDFUnique
     common = pd.merge(dfToCompare, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
     del common['score']
+    common = common.terms.drop_duplicates()
     common.to_csv("elasticsearch/analyse/"+repToSave+"/common.csv")
 
     # Get what terms are specific to Adapt-TF-IDF
