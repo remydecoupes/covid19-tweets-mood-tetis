@@ -538,10 +538,15 @@ def tfidfNoHierarchical():
     feature_names = vectorizer.get_feature_names()
     dense = vectors.todense()
     denselist = dense.tolist()
+
     ## matrixTFIDF
     TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
-    ## Extract N TOP ranking score
+    TFIDFClassical.to_csv("elasticsearch/analyse/TFIDFClassical/tfidfclassical.csv")
 
+    ## Extract N TOP ranking score
+    top_n = 500
+    extractBiggest = TFIDFClassical.stack().nlargest(top_n)
+    extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
 
 
 if __name__ == '__main__':
