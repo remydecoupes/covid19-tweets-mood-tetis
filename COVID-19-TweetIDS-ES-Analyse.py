@@ -517,11 +517,14 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
 def tfidfClassical():
     """/!\ under dev !!!
 
-    Remove period
+    Remove filter and pass it as args :
+        - period
+        - list of Cities
     """
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
 
     # Query Elasticsearch to get all tweets from UK
     tweets = elasticsearchQuery()
@@ -530,8 +533,10 @@ def tfidfClassical():
     matrixAllTweets = pd.DataFrame(columns=col)
     for tweetByCity in tweets.keys():
         # pprint(tweets[tweetByCity])
-        matrix = pd.DataFrame(tweets[tweetByCity])
-        matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+        # Filter cities :
+        if str(tweetByCity).split("_")[0] in listOfCity:
+            matrix = pd.DataFrame(tweets[tweetByCity])
+            matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
     # NB :  28354 results instead of 44841 (from ES) because we work only on tweets with a city found
     # Split datetime into date and time
     matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
