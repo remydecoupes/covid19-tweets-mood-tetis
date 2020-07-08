@@ -559,7 +559,7 @@ def tfidfClassical():
     for term in TFIDFClassical.keys():
         if term in stopwords.words('english'):
             del TFIDFClassical[term]
-    TFIDFClassical.to_csv("elasticsearch/analyse/TFIDFClassical/tfidfclassical.csv")
+    # TFIDFClassical.to_csv("elasticsearch/analyse/TFIDFClassical/tfidfclassical.csv")
 
     ## Extract N TOP ranking score
     top_n = 500
@@ -569,7 +569,7 @@ def tfidfClassical():
     extractBiggest.columns = ['old-index', 'terms', 'score']
     del extractBiggest['old-index']
     extractBiggest = extractBiggest.drop_duplicates(subset='terms', keep="first")
-    # extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
+    extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
 
     # Compare with H-TFIDF
     repToSave = "TFIDFClassical"
@@ -590,7 +590,7 @@ def tfidfClassical():
         if term in stopwords.words('english'):
             del TFClassical[term]
     ### save in file
-    TFClassical.to_csv("elasticsearch/analyse/TFlassical/tfclassical.csv")
+    # TFClassical.to_csv("elasticsearch/analyse/TFClassical/tfclassical.csv")
 
     ## Extract N TOP ranking score
     top_n = 500
@@ -599,8 +599,8 @@ def tfidfClassical():
     extractBiggestTF = extractBiggestTF.reset_index(level=[0,1])
     extractBiggestTF.columns = ['old-index', 'terms', 'score']
     del extractBiggestTF['old-index']
-    extractBiggestTF = extractBiggest.drop_duplicates(subset='terms', keep="first")
-    # extractBiggest.to_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
+    extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
+    extractBiggestTF.to_csv("elasticsearch/analyse/TFClassical/TFclassicalBiggestScore.csv")
 
     # Compare with H-TFIDF
     repToSave = "TFClassical"

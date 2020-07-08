@@ -40,6 +40,10 @@ elasticsearch/analyse/elastic*
 elasticsearch/analyse/lda/*
 elasticsearch/analyse/biotexonhiccs/*
 elasticsearch/analyse/TFIDFClassical/*
+elasticsearch/analyse/*.ods
+elasticsearch/analyse/TFClassical/*
+
+
 
 # libreoffice swp
 *.swp
