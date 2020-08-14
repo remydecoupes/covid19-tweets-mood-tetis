@@ -24,6 +24,7 @@ from termcolor import colored
 # end LDA
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from nltk.corpus import wordnet
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -461,15 +462,15 @@ def ldHTFIDFadaptative(listOfcities):
     listOfStatesTopicsCSV = pd.DataFrame(listOfStatesTopics)
     listOfStatesTopicsCSV.to_csv("elasticsearch/analyse/lda/topicBySate.csv")
 
-def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
-    # biotex = pd.read_csv('elasticsearch/analyse/biotexonhiccs/biotexUKbyStates.csv',
-    #                      names=['terms', 'UMLS', 'score'], sep=';')
+def concatenateHTFIDFBiggestscore():
+    """
+    This function return a dataframe of one column containing all terms. i.e regroup all terms
+    :param:
+    :return: dataframe of 1 column with all terms from states stacked
+    """
     HTFIDF = pd.read_csv('elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv', index_col=0)
     # Transpose A-TF-IDF (inverse rows and columns)
     HTFIDF = HTFIDF.transpose()
-    # select N first terms
-    dfToCompare = dfToCompare[:number_of_term]
-
 
     # group together all states' terms
     HTFIDFUnique = pd.Series(dtype='string')
@@ -478,12 +479,27 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     ## drop duplicate
     HTFIDFUnique = HTFIDFUnique.drop_duplicates()
     ## select N first terms of H-TFIDF (after stack)
-    HTFIDFUnique = HTFIDFUnique[:number_of_term]
+    #HTFIDFUnique = HTFIDFUnique[:number_of_term]
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
     HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns= {0: 'terms'})
     HTFIDFUniquedf['terms'] = HTFIDFUnique
+
+    return HTFIDFUniquedf
+
+def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
+    """
+
+    :param number_of_term:
+    :param dfToCompare:
+    :param repToSave:
+    :return:
+    """
+    # Stack / concatenate all terms from all states in one column
+    HTFIDFUniquedf = concatenateHTFIDFBiggestscore()[:number_of_term]
+    # select N first terms
+    dfToCompare = dfToCompare[:number_of_term]
     common = pd.merge(dfToCompare, HTFIDFUniquedf, left_on='terms', right_on='terms', how='inner')
     # del common['score']
     common = common.terms.drop_duplicates()
@@ -509,8 +525,8 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     specificdfToCompare.to_csv("elasticsearch/analyse/"+repToSave+"/specific-reference.csv")
 
     # Print stats
-    percentIncommon = len(common)/len(HTFIDFUnique)*100
-    percentOfSpecificHTFIDF = len(specificHTFIDF)/len(HTFIDFUnique)*100
+    percentIncommon = len(common)/len(HTFIDFUniquedf)*100
+    percentOfSpecificHTFIDF = len(specificHTFIDF)/len(HTFIDFUniquedf)*100
     print("Percent in common "+str(percentIncommon))
     print("Percent of specific at H-TFIDF : "+str(percentOfSpecificHTFIDF))
     
@@ -606,6 +622,20 @@ def tfidfClassical():
     repToSave = "TFClassical"
     compareWithHTFIDF(200, extractBiggestTF, repToSave)
 
+def wordnetCoverage(pdterms):
+    """
+
+    :param pdterms: pd.dataframes of terms
+    :return:
+    """
+    # Add a wordnet column boolean type : True if word is in wordnet, False otherwise
+    pdterms['wordnet'] = False
+    # Loop on terms and check if there are in wordnet
+    for index, row in pdterms.iterrows():
+        if len(wordnet.synsets(row['terms'])) != 0:
+            pdterms.at[index, 'wordnet'] = True
+
+
 if __name__ == '__main__':
     print("begin")
     """
@@ -650,5 +680,8 @@ if __name__ == '__main__':
 
     #Compare classical TF-IDF with H-TFIDF
     tfidfClassical()
+
+    # Wordnet coverage : Are the terms in Wornet : (are they be modified by the twitter users)
+    pdterms = pd.read_csv('elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv')
 
     print("end")
