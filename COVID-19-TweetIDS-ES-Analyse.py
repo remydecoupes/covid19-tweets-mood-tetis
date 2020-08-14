@@ -474,12 +474,12 @@ def concatenateHTFIDFBiggestscore():
 
     # group together all states' terms
     HTFIDFUnique = pd.Series(dtype='string')
-    for state in HTFIDF.keys():
-        HTFIDFUnique = HTFIDFUnique.append(HTFIDF[state], ignore_index=True)
+    ## loop on row for append states' terms in order to take into account their rank
+    ## If there are 4 states, It will add the 4 first terms by iterow
+    for index, row in HTFIDF.iterrows():
+        HTFIDFUnique = HTFIDFUnique.append(row.transpose(), ignore_index=True)
     ## drop duplicate
     HTFIDFUnique = HTFIDFUnique.drop_duplicates()
-    ## select N first terms of H-TFIDF (after stack)
-    #HTFIDFUnique = HTFIDFUnique[:number_of_term]
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
