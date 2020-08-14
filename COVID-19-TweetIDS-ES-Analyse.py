@@ -530,12 +530,19 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     print("Percent in common "+str(percentIncommon))
     print("Percent of specific at H-TFIDF : "+str(percentOfSpecificHTFIDF))
     
-def tfidfClassical():
-    """/!\ under dev !!!
-
-    Remove filter and pass it as args :
-        - period
-        - list of Cities
+def HTFIDF_comparewith_TFIDF_TF():
+    """
+    .. warnings:: /!\ under dev !!!. See TODO below
+    .. todo::
+        - Remove filter and pass it as args :
+            - period
+            - list of Cities
+        - Pass files path in args
+    Gives commons and specifics terms between H-TFIDF and TF & TF-IDF classics
+    Creates 6 csv files : 3 for earch classical measures :
+        - Common.csv : list of common terms
+        - specific-htfidf : terms only in H-TF-IDF
+        - specific-reference : terms only in one classical measurs
     """
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
@@ -624,9 +631,9 @@ def tfidfClassical():
 
 def wordnetCoverage(pdterms):
     """
-
-    :param pdterms: pd.dataframes of terms
-    :return:
+    add an additionnal column with boolean term is in wordnet
+    :param pdterms: pd.dataframes of terms. Must have a column with "terms" as a name
+    :return: pdterms with additionnal column with boolean term is in wordnet
     """
     # Add a wordnet column boolean type : True if word is in wordnet, False otherwise
     pdterms['wordnet'] = False
@@ -634,6 +641,7 @@ def wordnetCoverage(pdterms):
     for index, row in pdterms.iterrows():
         if len(wordnet.synsets(row['terms'])) != 0:
             pdterms.at[index, 'wordnet'] = True
+    return pdterms
 
 
 if __name__ == '__main__':
@@ -678,8 +686,11 @@ if __name__ == '__main__':
     compareWithHTFIDF(200, biotex, repToSave)
     """
 
+    """
     #Compare classical TF-IDF with H-TFIDF
-    tfidfClassical()
+    ## HTFIDF_comparewith_TFIDF_TF() gives commun and spectific terms between H-TFIDF and TF-ISF & TF classics
+    HTFIDF_comparewith_TFIDF_TF()
+    """
 
     # Wordnet coverage : Are the terms in Wornet : (are they be modified by the twitter users)
     pdterms = pd.read_csv('elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv')
