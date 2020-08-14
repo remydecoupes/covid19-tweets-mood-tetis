@@ -25,6 +25,8 @@ from termcolor import colored
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.corpus import wordnet
+# plot
+import matplotlib.pyplot as plt
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -738,6 +740,8 @@ if __name__ == '__main__':
         }
         wordnetCoverageByNbofterms.loc[i] = row
     print(wordnetCoverageByNbofterms)
+    wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf','tf'], kind='line')
+    plt.show()
 
 
     print("end")
