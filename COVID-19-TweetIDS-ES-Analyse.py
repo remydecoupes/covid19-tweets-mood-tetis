@@ -740,8 +740,14 @@ if __name__ == '__main__':
         }
         wordnetCoverageByNbofterms.loc[i] = row
     print(wordnetCoverageByNbofterms)
-    wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf','tf'], kind='line')
-    plt.show()
+    ax = wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf','tf'], kind='line')
+    ax.set(
+        xlabel='Number of the first n elements',
+        ylabel='Percentage of terms in wordnet',
+        title='Percentage of terms in wordnet by measures H-TFIDF / TF-IDF / TF'
+    )
+    #plt.show()
+    ax.get_figure().savefig("elasticsearch/analyse/wordnetcov.png")
 
 
     print("end")

@@ -35,6 +35,7 @@ hiics
 
 # elasticsearch : export of twitter data 
 elasticsearch/analyse/*.csv
+elasticsearch/analyse/*.png
 elasticsearch/analyse/*.html
 elasticsearch/analyse/elastic*
 elasticsearch/analyse/lda/*
