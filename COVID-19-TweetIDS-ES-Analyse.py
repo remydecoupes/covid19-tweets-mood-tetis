@@ -703,15 +703,15 @@ if __name__ == '__main__':
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
     tfidf.to_csv(tfidfpath)
-    tfidf = tfidf[0:nfirstterms]
-    tfidfPercentInWordnet = len(tfidf[tfidf.wordnet == True]) / len(tfidf)
+    tfidfd = tfidf[0:nfirstterms]
+    tfidfPercentInWordnet = len(tfidfd[tfidfd.wordnet == True]) / nfirstterms
     print("TF-IDF wordnet coverage for the ", nfirstterms, "first terms: ", tfidfPercentInWordnet)
     ### TF
     tf = pd.read_csv(tfpath)
     tf = wordnetCoverage(tf)
     tf.to_csv(tfpath)
-    tf = tf[0:nfirstterms]
-    tfPercentInWordnet = len(tf[tf.wordnet == True]) / len(tf)
+    tfd = tf[0:nfirstterms]
+    tfPercentInWordnet = len(tfd[tfd.wordnet == True]) / nfirstterms
     print("TF wordnet coverage for the ", nfirstterms, "first terms: ", tfPercentInWordnet)
     ### H-TFIDF
     htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
@@ -719,8 +719,25 @@ if __name__ == '__main__':
     htfidf = concatenateHTFIDFBiggestscore()
     htfidf = wordnetCoverage(htfidf)
     htfidf.to_csv(htfidfStackedPAth)
-    htfidf = htfidf[0:nfirstterms]
-    htfidfPercentInWordnet = len(htfidf[htfidf.wordnet == True]) / len(htfidf)
+    htfidfd = htfidf[0:nfirstterms]
+    htfidfPercentInWordnet = len(htfidfd[htfidfd.wordnet == True]) / nfirstterms
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
+    ## plot graph coverage depending nb first elements
+    nbfirstelementsRange=[10, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+    col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs' ]
+    wordnetCoverageByNbofterms = pd.DataFrame(columns=col)
+    for i, nb in enumerate(nbfirstelementsRange):
+        htfidfd = htfidf[0:nb]
+        tfidfd = tfidf[0:nb]
+        tfd = tf[0:nb]
+        row = {
+            "h-tfidf": len(htfidfd[htfidfd.wordnet == True]) / nb,
+            'tf-idf': len(tfidfd[tfidfd.wordnet == True]) / nb,
+            'tf': len(tfd[tfd.wordnet == True]) / nb,
+            'nbFirsTemrs': nb
+        }
+        wordnetCoverageByNbofterms.loc[i] = row
+    print(wordnetCoverageByNbofterms)
+
 
     print("end")
