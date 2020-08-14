@@ -685,6 +685,9 @@ if __name__ == '__main__':
     repToSave = "biotexonhiccs"
     compareWithHTFIDF(200, biotex, repToSave)
     """
+    # declare path for comparison H-TFIDF with TF-IDF and TF (scikit measures)
+    tfidfpath = "elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv"
+    tfpath = "elasticsearch/analyse/TFClassical/TFclassicalBiggestScore.csv"
 
     """
     #Compare classical TF-IDF with H-TFIDF
@@ -693,6 +696,31 @@ if __name__ == '__main__':
     """
 
     # Wordnet coverage : Are the terms in Wornet : (are they be modified by the twitter users)
-    pdterms = pd.read_csv('elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv')
+    ## open measures results and add a column wordet
+    ### Limit to a maximun numbers of terms
+    nfirstterms = 100
+    ### TF-IDF
+    tfidf = pd.read_csv(tfidfpath)
+    tfidf = wordnetCoverage(tfidf)
+    tfidf.to_csv(tfidfpath)
+    tfidf = tfidf[0:nfirstterms]
+    tfidfPercentInWordnet = len(tfidf[tfidf.wordnet == True]) / len(tfidf)
+    print("TF-IDF wordnet coverage for the ", nfirstterms, "first terms: ", tfidfPercentInWordnet)
+    ### TF
+    tf = pd.read_csv(tfpath)
+    tf = wordnetCoverage(tf)
+    tf.to_csv(tfpath)
+    tf = tf[0:nfirstterms]
+    tfPercentInWordnet = len(tf[tf.wordnet == True]) / len(tf)
+    print("TF wordnet coverage for the ", nfirstterms, "first terms: ", tfPercentInWordnet)
+    ### H-TFIDF
+    htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
+    #### Stacked H-TFIDF
+    htfidf = concatenateHTFIDFBiggestscore()
+    htfidf = wordnetCoverage(htfidf)
+    htfidf.to_csv(htfidfStackedPAth)
+    htfidf = htfidf[0:nfirstterms]
+    htfidfPercentInWordnet = len(htfidf[htfidf.wordnet == True]) / len(htfidf)
+    print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
 
     print("end")
