@@ -25,8 +25,8 @@ from termcolor import colored
 import pandas as pd
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.corpus import wordnet
-# plot
-import matplotlib.pyplot as plt
+# SPARQL
+import sparql
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -645,6 +645,34 @@ def wordnetCoverage(pdterms):
             pdterms.at[index, 'wordnet'] = True
     return pdterms
 
+def agrovocCoverage(pdterms):
+    """
+    Add an additionnal column with boolean if term is in agrovoc
+    :param pdterms: same as wordnetCoverage
+    :return: same as wornetCoverage
+    """
+    # Add a agrovoc column boolean type : True if terms is in Agrovoc
+    pdterms['agrovoc'] = False
+    # Define agrovoc sparql endpoint
+    endpoint = 'http://agrovoc.uniroma2.it/sparql'
+    # Loop on term
+    for index, row in pdterms.iterrows():
+        # Build SPARQL query
+        term = row['terms']
+        q = ('PREFIX skos: <http://www.w3.org/2004/02/skos/core#> '
+            'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
+            'ask WHERE {'
+            '?myterm skosxl:literalForm ?labelAgro.'
+            'FILTER(lang(?labelAgro) = "en").'
+            'filter(REGEX(?labelAgro, "^'+ str(term)+ '(s)*$", "i"))'
+            '}' )
+        # query agrovoc
+        result = sparql.query(endpoint, q)
+        if result.hasresult():
+            pdterms.at[index, 'agrovoc'] = True
+    return pdterms
+
+
 
 if __name__ == '__main__':
     print("begin")
@@ -704,10 +732,13 @@ if __name__ == '__main__':
     ### TF-IDF
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
+    tfidf = agrovocCoverage(tfidf)
     tfidf.to_csv(tfidfpath)
     tfidfd = tfidf[0:nfirstterms]
     tfidfPercentInWordnet = len(tfidfd[tfidfd.wordnet == True]) / nfirstterms
     print("TF-IDF wordnet coverage for the ", nfirstterms, "first terms: ", tfidfPercentInWordnet)
+    tfidfPercentInAgrovoc = len(tfidfd[tfidfd.agrovoc == True]) / nfirstterms
+    print("TF-IDF agrovoc coverage for the ", nfirstterms, "first terms: ", tfidfPercentInAgrovoc)
     ### TF
     tf = pd.read_csv(tfpath)
     tf = wordnetCoverage(tf)
