@@ -66,6 +66,10 @@ Using cURL help to define a good query for debugging specially when SPARQL endpo
 For example, it helps me to know that the condition "form" doesn't work well with cURL neither with python's sparql-client package.
 
 ## Building Query
-Often each thesaurus has their home made web interface to build a query. It's very useful (they show a list of pre-build queries) but, it hides things sometimes. For example, [mesh](https://id.nlm.nih.gov/mesh/query) hides the correct endpoint.
-So you may want to use another web interface. I suggest (Triply)[http://yasgui.triply.cc/] as it has a lot of reprentation of data (HTML / Table / Chart / Geo / Timeline).
+Often each thesaurus has their home made web interface to build a query. It's very useful (they show a list of pre-build queries) 
+* [agrovoc](http://agrovoc.uniroma2.it/sparql)
+* [mesh](https://id.nlm.nih.gov/mesh/query)
+
+But it hides things sometimes. For example, [mesh](https://id.nlm.nih.gov/mesh/query) hides the correct endpoint.
+So you may want to use another web interface. I suggest [Triply](http://yasgui.triply.cc/) as it has a lot of reprentation of data (HTML / Table / Chart / Geo / Timeline).
 
