@@ -3,13 +3,12 @@
 """
 analyse Elasticsearch query
 """
-import json
-from pprint import pprint
-from elasticsearch import Elasticsearch, exceptions
+
+from elasticsearch import Elasticsearch
 from collections import defaultdict
 import re
 from pathlib import Path
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 # Preprocess terms for TF-IDF
 import numpy as np
 from nltk.corpus import stopwords
@@ -19,7 +18,7 @@ from num2words import num2words
 # LDA
 from gensim import corpora, models
 import pyLDAvis.gensim
-## print in coloer
+# print in color
 from termcolor import colored
 # end LDA
 import pandas as pd
@@ -27,6 +26,8 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.corpus import wordnet
 # SPARQL
 import sparql
+
+# multiprocessing
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -141,7 +142,7 @@ def preprocessTerms(document):
     """
     Pre process Terms according to
     https://towardsdatascience.com/tf-idf-for-document-ranking-from-scratch-in-python-on-real-world-dataset-796d339a4089
-    :param tweet:
+    :param:
     :return:
     """
 
@@ -308,11 +309,12 @@ def biotexAdaptativeBuilderAdaptative(listOfcities='all', spatialLevel='city', p
     ## change index
     matrixAggDay.set_index('city', inplace=True)
     matrixFiltred = spatiotemporelFilter(matrix=matrixAggDay, listOfcities=listOfcities,
-                         spatialLevel='state', period=period)
+                                         spatialLevel='state', period=period)
 
     ## Pre-process :Create 4 new columns : city, State, Country and date
     def splitindex(row):
         return row.split("_")
+
     matrixFiltred["city"], matrixFiltred["state"], matrixFiltred["country"], matrixFiltred["date"] = \
         zip(*matrixFiltred.index.map(splitindex))
 
@@ -464,6 +466,7 @@ def ldHTFIDFadaptative(listOfcities):
     listOfStatesTopicsCSV = pd.DataFrame(listOfStatesTopics)
     listOfStatesTopicsCSV.to_csv("elasticsearch/analyse/lda/topicBySate.csv")
 
+
 def concatenateHTFIDFBiggestscore():
     """
     This function return a dataframe of one column containing all terms. i.e regroup all terms
@@ -485,10 +488,11 @@ def concatenateHTFIDFBiggestscore():
 
     # merge to see what terms have in common
     ## convert series into dataframe before merge
-    HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns= {0: 'terms'})
+    HTFIDFUniquedf = HTFIDFUnique.to_frame().rename(columns={0: 'terms'})
     HTFIDFUniquedf['terms'] = HTFIDFUnique
 
     return HTFIDFUniquedf
+
 
 def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     """
@@ -507,7 +511,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     common = common.terms.drop_duplicates()
     common = common.reset_index()
     del common['index']
-    common.to_csv("elasticsearch/analyse/"+repToSave+"/common.csv")
+    common.to_csv("elasticsearch/analyse/" + repToSave + "/common.csv")
 
     # Get what terms are specific to Adapt-TF-IDF
     print(dfToCompare)
@@ -516,7 +520,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     specificHTFIDF = HTFIDFUniquedf.drop(HTFIDFUniquedf[condition].index)
     specificHTFIDF = specificHTFIDF.reset_index()
     del specificHTFIDF['index']
-    specificHTFIDF.to_csv("elasticsearch/analyse/"+repToSave+"/specific-H-TFIDF.csv")
+    specificHTFIDF.to_csv("elasticsearch/analyse/" + repToSave + "/specific-H-TFIDF.csv")
 
     # Get what terms are specific to dfToCompare
     dfToCompare['terms'][~dfToCompare['terms'].isin(HTFIDFUniquedf['terms'])].dropna()
@@ -524,14 +528,15 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     specificdfToCompare = dfToCompare.drop(dfToCompare[condition].index)
     specificdfToCompare = specificdfToCompare.reset_index()
     del specificdfToCompare['index']
-    specificdfToCompare.to_csv("elasticsearch/analyse/"+repToSave+"/specific-reference.csv")
+    specificdfToCompare.to_csv("elasticsearch/analyse/" + repToSave + "/specific-reference.csv")
 
     # Print stats
-    percentIncommon = len(common)/len(HTFIDFUniquedf)*100
-    percentOfSpecificHTFIDF = len(specificHTFIDF)/len(HTFIDFUniquedf)*100
-    print("Percent in common "+str(percentIncommon))
-    print("Percent of specific at H-TFIDF : "+str(percentOfSpecificHTFIDF))
-    
+    percentIncommon = len(common) / len(HTFIDFUniquedf) * 100
+    percentOfSpecificHTFIDF = len(specificHTFIDF) / len(HTFIDFUniquedf) * 100
+    print("Percent in common " + str(percentIncommon))
+    print("Percent of specific at H-TFIDF : " + str(percentOfSpecificHTFIDF))
+
+
 def HTFIDF_comparewith_TFIDF_TF():
     """
     .. warnings:: /!\ under dev !!!. See TODO below
@@ -567,7 +572,7 @@ def HTFIDF_comparewith_TFIDF_TF():
     matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
     matrixAllTweets["time"] = [d.time() for d in matrixAllTweets['created_at']]
 
-    # Filter by a period
+    #  Filter by a period
     mask = ((matrixAllTweets["date"] >= tfidfPeriod.min()) & (matrixAllTweets["date"] <= tfidfPeriod.max()))
     matrixAllTweets = matrixAllTweets.loc[mask]
 
@@ -590,7 +595,7 @@ def HTFIDF_comparewith_TFIDF_TF():
     top_n = 500
     extractBiggest = TFIDFClassical.stack().nlargest(top_n)
     ### Reset index becaus stack create a multi-index (2 level : old index + terms)
-    extractBiggest = extractBiggest.reset_index(level=[0,1])
+    extractBiggest = extractBiggest.reset_index(level=[0, 1])
     extractBiggest.columns = ['old-index', 'terms', 'score']
     del extractBiggest['old-index']
     extractBiggest = extractBiggest.drop_duplicates(subset='terms', keep="first")
@@ -599,7 +604,6 @@ def HTFIDF_comparewith_TFIDF_TF():
     # Compare with H-TFIDF
     repToSave = "TFIDFClassical"
     compareWithHTFIDF(200, extractBiggest, repToSave)
-
 
     # Compute TF
     tf = CountVectorizer()
@@ -621,7 +625,7 @@ def HTFIDF_comparewith_TFIDF_TF():
     top_n = 500
     extractBiggestTF = TFClassical.stack().nlargest(top_n)
     ### Reset index becaus stack create a multi-index (2 level : old index + terms)
-    extractBiggestTF = extractBiggestTF.reset_index(level=[0,1])
+    extractBiggestTF = extractBiggestTF.reset_index(level=[0, 1])
     extractBiggestTF.columns = ['old-index', 'terms', 'score']
     del extractBiggestTF['old-index']
     extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
@@ -630,6 +634,7 @@ def HTFIDF_comparewith_TFIDF_TF():
     # Compare with H-TFIDF
     repToSave = "TFClassical"
     compareWithHTFIDF(200, extractBiggestTF, repToSave)
+
 
 def wordnetCoverage(pdterms):
     """
@@ -678,22 +683,22 @@ def sparqlquery(thesaurus, term):
     # Define agrovoc sparql endpoint and query
     endpoint = 'http://agrovoc.uniroma2.it/sparql'
     qagrovoc = ('PREFIX skos: <http://www.w3.org/2004/02/skos/core#> '
-         'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
-         'ask WHERE {'
-         '?myterm skosxl:literalForm ?labelAgro.'
-         'FILTER(lang(?labelAgro) = "en").'
-         'filter(REGEX(?labelAgro, "^' + str(term) + '(s)*$", "i"))'
-                                                     '}')
+                'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
+                'ask WHERE {'
+                '?myterm skosxl:literalForm ?labelAgro.'
+                'FILTER(lang(?labelAgro) = "en").'
+                'filter(REGEX(?labelAgro, "^' + str(term) + '(s)*$", "i"))'
+                                                            '}')
     # query mesh
-    if thesaurus == "agrovoc" :
+    if thesaurus == "agrovoc":
         q = qagrovoc
     elif thesaurus == "mesh":
         q = qmesh
     else:
         raise Exception('Wrong thesaurus given')
-        return False
     result = sparql.query(endpoint, q)
     return result
+
 
 def agrovocCoverage(pdterms):
     """
@@ -712,6 +717,7 @@ def agrovocCoverage(pdterms):
             pdterms.at[index, 'agrovoc'] = True
     return pdterms
 
+
 def meshCoverage(pdterms):
     """
     Add an additionnal column with boolean if term is in MeSH
@@ -721,7 +727,7 @@ def meshCoverage(pdterms):
 
     # Add a MeSH column boolean type : True if terms is in Mesh
     pdterms['mesh'] = False
-    # Loop on term
+    # Loop on term with multiprocessing
     for index, row in pdterms.iterrows():
         # Build SPARQL query
         term = row['terms']
@@ -729,7 +735,6 @@ def meshCoverage(pdterms):
         if result.hasresult():
             pdterms.at[index, 'mesh'] = True
     return pdterms
-
 
 
 if __name__ == '__main__':
@@ -829,10 +834,9 @@ if __name__ == '__main__':
     htfidfPercentInWordnet = len(htfidfd[htfidfd.wordnet == True]) / nfirstterms
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
 
-
     ## plot graph coverage depending nb first elements
-    nbfirstelementsRange=[10, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
-    col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs' ]
+    nbfirstelementsRange = [10, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+    col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs']
     wordnetCoverageByNbofterms = pd.DataFrame(columns=col)
     for i, nb in enumerate(nbfirstelementsRange):
         htfidfd = htfidf[0:nb]
@@ -846,12 +850,12 @@ if __name__ == '__main__':
         }
         wordnetCoverageByNbofterms.loc[i] = row
     print(wordnetCoverageByNbofterms)
-    ax = wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf','tf'], kind='line')
+    ax = wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf', 'tf'], kind='line')
     ax.set(
         xlabel='Number of the first n elements',
         ylabel='Percentage of terms in wordnet',
         title='Percentage of terms in wordnet by measures H-TFIDF / TF-IDF / TF'
     )
-    #plt.show()
+    # plt.show()
     ax.get_figure().savefig("elasticsearch/analyse/wordnetcov.png")
     print("end")
