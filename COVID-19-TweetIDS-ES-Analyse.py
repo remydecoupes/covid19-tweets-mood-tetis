@@ -701,7 +701,11 @@ def sparqlquery(thesaurus, term):
         endpoint = endpointmesh
     else:
         raise Exception('Wrong thesaurus given')
-    result = sparql.query(endpoint, q)
+    try:
+        result = sparql.query(endpoint, q)
+    # Sometimes Endpoint can bug on a request.
+    except:
+        result = "endpoint error"
     return result
 
 
@@ -711,6 +715,8 @@ def agrovocCoverage(pdterms):
     :param pdterms: same as wordnetCoverage
     :return: same as wornetCoverage
     """
+    # Log number of error raised by sparql endpoint
+    endpointerror = 0
     # Add a agrovoc column boolean type : True if terms is in Agrovoc
     pdterms['agrovoc'] = False
     # Loop on term
@@ -718,8 +724,12 @@ def agrovocCoverage(pdterms):
         # Build SPARQL query
         term = row['terms']
         result = sparqlquery('agrovoc', term)
-        if result.hasresult():
+        if result == "endpoint error":
+            endpointerror += 1
+            pdterms.at[index, 'mesh'] = "Error"
+        elif result.hasresult():
             pdterms.at[index, 'agrovoc'] = True
+    print("Agrovoc number of error: "+endpointerror)
     return pdterms
 
 
@@ -729,7 +739,8 @@ def meshCoverage(pdterms):
     :param pdterms: same as wordnetCoverage
     :return: same as wornetCoverage
     """
-
+    # Log number of error raised by sparql endpoint
+    endpointerror = 0
     # Add a MeSH column boolean type : True if terms is in Mesh
     pdterms['mesh'] = False
     # Loop on term with multiprocessing
@@ -737,8 +748,12 @@ def meshCoverage(pdterms):
         # Build SPARQL query
         term = row['terms']
         result = sparqlquery('mesh', term)
-        if result.hasresult():
+        if result == "endpoint error":
+            endpointerror += 1
+            pdterms.at[index, 'mesh'] = "Error"
+        elif result.hasresult():
             pdterms.at[index, 'mesh'] = True
+    print("Mesh number of error: " + endpointerror)
     return pdterms
 
 
