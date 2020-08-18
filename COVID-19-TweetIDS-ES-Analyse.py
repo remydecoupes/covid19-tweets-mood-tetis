@@ -765,36 +765,53 @@ if __name__ == '__main__':
     HTFIDF_comparewith_TFIDF_TF()
     """
 
-    # Wordnet coverage : Are the terms in Wornet : (are they be modified by the twitter users)
-    ## open measures results and add a column wordet
-    ### Limit to a maximun numbers of terms
-    nfirstterms = 100
+    # Thesaurus coverage : Are the terms in Wordnet / Agrovoc / MeSH
+    ## open measures results and add a column for each thesaurus
     ### TF-IDF
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
     tfidf = agrovocCoverage(tfidf)
+    tfidf = meshCoverage(tfidf)
     tfidf.to_csv(tfidfpath)
+    print("TF-IDF thesaurus comparison: done")
+
+    ### TF
+    tf = pd.read_csv(tfpath)
+    tf = wordnetCoverage(tf)
+    tf = agrovocCoverage(tf)
+    tf = meshCoverage(tf)
+    tf.to_csv(tfpath)
+    print("TF thesaurus comparison: done")
+
+    ### H-TFIDF
+    htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
+    #### Stacked H-TFIDF
+    htfidf = concatenateHTFIDFBiggestscore()
+    htfidf = wordnetCoverage(htfidf)
+    htfidf = agrovocCoverage(htfidf)
+    htfidf = meshCoverage(htfidf)
+    htfidf.to_csv(htfidfStackedPAth)
+    print("H-TFIDF thesaurus comparison: done")
+
+    ## Percent of Coverage : print
+    ### Limit to a maximun numbers of terms
+    nfirstterms = 100
+    ### TF-IDF
     tfidfd = tfidf[0:nfirstterms]
     tfidfPercentInWordnet = len(tfidfd[tfidfd.wordnet == True]) / nfirstterms
     print("TF-IDF wordnet coverage for the ", nfirstterms, "first terms: ", tfidfPercentInWordnet)
     tfidfPercentInAgrovoc = len(tfidfd[tfidfd.agrovoc == True]) / nfirstterms
     print("TF-IDF agrovoc coverage for the ", nfirstterms, "first terms: ", tfidfPercentInAgrovoc)
     ### TF
-    tf = pd.read_csv(tfpath)
-    tf = wordnetCoverage(tf)
-    tf.to_csv(tfpath)
     tfd = tf[0:nfirstterms]
     tfPercentInWordnet = len(tfd[tfd.wordnet == True]) / nfirstterms
     print("TF wordnet coverage for the ", nfirstterms, "first terms: ", tfPercentInWordnet)
     ### H-TFIDF
-    htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
-    #### Stacked H-TFIDF
-    htfidf = concatenateHTFIDFBiggestscore()
-    htfidf = wordnetCoverage(htfidf)
-    htfidf.to_csv(htfidfStackedPAth)
     htfidfd = htfidf[0:nfirstterms]
     htfidfPercentInWordnet = len(htfidfd[htfidfd.wordnet == True]) / nfirstterms
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
+
+
     ## plot graph coverage depending nb first elements
     nbfirstelementsRange=[10, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
     col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs' ]
@@ -819,6 +836,4 @@ if __name__ == '__main__':
     )
     #plt.show()
     ax.get_figure().savefig("elasticsearch/analyse/wordnetcov.png")
-
-
     print("end")

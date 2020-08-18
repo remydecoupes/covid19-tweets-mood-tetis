@@ -49,12 +49,12 @@ Results of this query from MeSH website : https://id.nlm.nih.gov/mesh/query
 ![mesh-results](img-markdown/mesh-results.png)
 ### explanation
 We want to retrieve 4 variables:
-* ?meshTerms: Termis in mesh that have a prefLabel matching 2 conditions (English and coronavirus)
-* ?lable : The mesh term pref label that match 2 conditions (in filter)
+* ?meshTerms: Terms in mesh that have a prefLabel matching 2 conditions (English and coronavirus)
+* ?label : The mesh term pref label that match 2 conditions (in filter)
 
 ### cURL
-This query could be retrieve using curl. It's very usefull for debugging.
-**Be carefull** cURL (with default option) doesn't follow redirection. However a lot of SPARQL Endpoint redirect to HTTPS. Be sure to give cURL an endpoint address without redirect (HTTP 301 Moved Permanently)
+This query could be retrieve using curl. It's very useful for debugging.
+**Be careful** cURL (with default option) doesn't follow redirection. However a lot of SPARQL Endpoint redirect to HTTPS. Be sure to give cURL an endpoint address without redirect (HTTP 301 Moved Permanently)
 #### Query
 ```
 curl -G https://id.nlm.nih.gov/mesh/sparql --data-urlencode query='
@@ -62,10 +62,10 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>PREFIX rdfs: <http://ww
 '
 ```
 Which retrieve an XML with the correct result.
-Using cURL help to define a good query for debugging specially when SPARQL endpoint redirect to HTTPS (wireshark/tcpdump could not give us opportunity to go futher in debugging). What's more, the python librairie used for sparql, sparql-client, doesn't give much information on this error, just telling which HTTP code error you raised.
+Using cURL help to define a good query for debugging specially when SPARQL endpoint redirect to HTTPS (wireshark/tcpdump could not give us opportunity to go further in debugging). What's more, the python librairie used for sparql, sparql-client, doesn't give much information on this error, just telling which HTTP code error you raised.
 For example, it helps me to know that the condition "form" doesn't work well with cURL neither with python's sparql-client package.
 
 ## Building Query
-Often each thesaurus has their home made web interface to build a query. It's very usefull (they show a list of pre-build queries) but, it hides things sometimes. For exemple, [mesh](https://id.nlm.nih.gov/mesh/query) hides the correct endpoint.
+Often each thesaurus has their home made web interface to build a query. It's very useful (they show a list of pre-build queries) but, it hides things sometimes. For example, [mesh](https://id.nlm.nih.gov/mesh/query) hides the correct endpoint.
 So you may want to use another web interface. I suggest (Triply)[http://yasgui.triply.cc/] as it has a lot of reprentation of data (HTML / Table / Chart / Geo / Timeline).
 
