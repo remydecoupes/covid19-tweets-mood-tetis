@@ -681,31 +681,30 @@ def meshCoverage(pdterms):
     # Add a MeSH column boolean type : True if terms is in Mesh
     pdterms['mesh'] = False
     # Define msh sparql endpoint
-    endpoint = 'http://id.nlm.nih.gov/mesh/query'
+    endpoint = 'http://id.nlm.nih.gov/mesh/sparql'
     # Loop on term
     for index, row in pdterms.iterrows():
         # Build SPARQL query
         term = row['terms']
         q = (
-            'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'
-            'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'
-            'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>'
-            'PREFIX owl: <http://www.w3.org/2002/07/owl#>'
-            'PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>'
-            'PREFIX mesh: <http://id.nlm.nih.gov/mesh/>'
-            'PREFIX mesh2020: <http://id.nlm.nih.gov/mesh/2020/>'
-            'PREFIX mesh2019: <http://id.nlm.nih.gov/mesh/2019/>'
-            'PREFIX mesh2018: <http://id.nlm.nih.gov/mesh/2018/>'
-            'SELECT ?d ?dName ?c ?cName'
-            'FROM <http://id.nlm.nih.gov/mesh>'
-            'WHERE {'
-            '?d a meshv:Descriptor .'
-            '?d meshv:concept ?c .'
-            '?d rdfs:label ?dName .'
-            '?c rdfs:label ?cName'
-            'FILTER(REGEX(?dName,"^' + str(term) + '$","i"))'
-            '}'
-            'ORDER BY ?d'
+                'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'
+                'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'
+                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>'
+                'PREFIX owl: <http://www.w3.org/2002/07/owl#>'
+                'PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>'
+                'PREFIX mesh: <http://id.nlm.nih.gov/mesh/>'
+                'PREFIX mesh2020: <http://id.nlm.nih.gov/mesh/2020/>'
+                'PREFIX mesh2019: <http://id.nlm.nih.gov/mesh/2019/>'
+                'PREFIX mesh2018: <http://id.nlm.nih.gov/mesh/2018/>'
+                ''
+                'ask'
+                'WHERE { '
+                '  ?meshTerms a meshv:Term .'
+                '  ?meshTerms meshv:prefLabel ?label .'
+                '  FILTER(lang(?label) = "en").'
+                '  filter(REGEX(?label, "^' + str(term) + '$", "i"))'
+                ''
+                '}'
         )
         # query mesh
         result = sparql.query(endpoint, q)
