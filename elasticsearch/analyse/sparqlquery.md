@@ -1,7 +1,7 @@
 # SPARQL queries explained
 After etracting terms from the tweets using various methodes (H-TFIDF, TF-IDF, TF), we seek to know how many of them are in controlled vocabulary (i.e Thesaurus) like Agrovoc and MeSH.
 ## Agrovoc
-endpoint**: http://agrovoc.uniroma2.it/sparql
+**endpoint**: http://agrovoc.uniroma2.it/sparql
 
 ### query
 ```

@@ -645,6 +645,56 @@ def wordnetCoverage(pdterms):
             pdterms.at[index, 'wordnet'] = True
     return pdterms
 
+
+def sparqlquery(thesaurus, term):
+    """
+    Sparql query. This methods have be factorize to be used in case of multiprocessign
+    :param thesaurus: which thesaurus to query ? agrovoc or mesh
+    :param term: term to align with thesaurus
+    :return: sparql result querry
+    """
+    # Define MeSH sparql endpoint and query
+    endpoint = 'http://id.nlm.nih.gov/mesh/sparql'
+    qmesh = (
+            'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'
+            'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'
+            'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>'
+            'PREFIX owl: <http://www.w3.org/2002/07/owl#>'
+            'PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>'
+            'PREFIX mesh: <http://id.nlm.nih.gov/mesh/>'
+            'PREFIX mesh2020: <http://id.nlm.nih.gov/mesh/2020/>'
+            'PREFIX mesh2019: <http://id.nlm.nih.gov/mesh/2019/>'
+            'PREFIX mesh2018: <http://id.nlm.nih.gov/mesh/2018/>'
+            ''
+            'ask'
+            'WHERE { '
+            '  ?meshTerms a meshv:Term .'
+            '  ?meshTerms meshv:prefLabel ?label .'
+            '  FILTER(lang(?label) = "en").'
+            '  filter(REGEX(?label, "^' + str(term) + '$", "i"))'
+                                                      ''
+                                                      '}'
+    )
+    # Define agrovoc sparql endpoint and query
+    endpoint = 'http://agrovoc.uniroma2.it/sparql'
+    qagrovoc = ('PREFIX skos: <http://www.w3.org/2004/02/skos/core#> '
+         'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
+         'ask WHERE {'
+         '?myterm skosxl:literalForm ?labelAgro.'
+         'FILTER(lang(?labelAgro) = "en").'
+         'filter(REGEX(?labelAgro, "^' + str(term) + '(s)*$", "i"))'
+                                                     '}')
+    # query mesh
+    if thesaurus == "agrovoc" :
+        q = qagrovoc
+    elif thesaurus == "mesh":
+        q = qmesh
+    else:
+        raise Exception('Wrong thesaurus given')
+        return False
+    result = sparql.query(endpoint, q)
+    return result
+
 def agrovocCoverage(pdterms):
     """
     Add an additionnal column with boolean if term is in agrovoc
@@ -653,21 +703,11 @@ def agrovocCoverage(pdterms):
     """
     # Add a agrovoc column boolean type : True if terms is in Agrovoc
     pdterms['agrovoc'] = False
-    # Define agrovoc sparql endpoint
-    endpoint = 'http://agrovoc.uniroma2.it/sparql'
     # Loop on term
     for index, row in pdterms.iterrows():
         # Build SPARQL query
         term = row['terms']
-        q = ('PREFIX skos: <http://www.w3.org/2004/02/skos/core#> '
-            'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
-            'ask WHERE {'
-            '?myterm skosxl:literalForm ?labelAgro.'
-            'FILTER(lang(?labelAgro) = "en").'
-            'filter(REGEX(?labelAgro, "^'+ str(term)+ '(s)*$", "i"))'
-            '}' )
-        # query agrovoc
-        result = sparql.query(endpoint, q)
+        result = sparqlquery('agrovoc', term)
         if result.hasresult():
             pdterms.at[index, 'agrovoc'] = True
     return pdterms
@@ -678,36 +718,14 @@ def meshCoverage(pdterms):
     :param pdterms: same as wordnetCoverage
     :return: same as wornetCoverage
     """
+
     # Add a MeSH column boolean type : True if terms is in Mesh
     pdterms['mesh'] = False
-    # Define msh sparql endpoint
-    endpoint = 'http://id.nlm.nih.gov/mesh/sparql'
     # Loop on term
     for index, row in pdterms.iterrows():
         # Build SPARQL query
         term = row['terms']
-        q = (
-                'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'
-                'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'
-                'PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>'
-                'PREFIX owl: <http://www.w3.org/2002/07/owl#>'
-                'PREFIX meshv: <http://id.nlm.nih.gov/mesh/vocab#>'
-                'PREFIX mesh: <http://id.nlm.nih.gov/mesh/>'
-                'PREFIX mesh2020: <http://id.nlm.nih.gov/mesh/2020/>'
-                'PREFIX mesh2019: <http://id.nlm.nih.gov/mesh/2019/>'
-                'PREFIX mesh2018: <http://id.nlm.nih.gov/mesh/2018/>'
-                ''
-                'ask'
-                'WHERE { '
-                '  ?meshTerms a meshv:Term .'
-                '  ?meshTerms meshv:prefLabel ?label .'
-                '  FILTER(lang(?label) = "en").'
-                '  filter(REGEX(?label, "^' + str(term) + '$", "i"))'
-                ''
-                '}'
-        )
-        # query mesh
-        result = sparql.query(endpoint, q)
+        result = sparqlquery('mesh', term)
         if result.hasresult():
             pdterms.at[index, 'mesh'] = True
     return pdterms
