@@ -63,7 +63,7 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>PREFIX rdfs: <http://ww
 ```
 Which retrieve an XML with the correct result.
 Using cURL help to define a good query for debugging specially when SPARQL endpoint redirect to HTTPS (wireshark/tcpdump could not give us opportunity to go further in debugging). What's more, the python librairie used for sparql, sparql-client, doesn't give much information on this error, just telling which HTTP code error you raised.
-For example, it helps me to know that the condition "form" doesn't work well with cURL neither with python's sparql-client package.
+For example, it helps me to know that the condition "form" needs a specific syntax (blank) with cURL and python's sparql-client package.
 
 ## Building Query
 Often each thesaurus has their home made web interface to build a query. It's very useful (they show a list of pre-build queries) 
