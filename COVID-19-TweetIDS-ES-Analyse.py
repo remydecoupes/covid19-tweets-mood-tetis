@@ -26,6 +26,8 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.corpus import wordnet
 # SPARQL
 import sparql
+# progress bar
+from tqdm import tqdm
 
 # multiprocessing
 
@@ -659,7 +661,7 @@ def sparqlquery(thesaurus, term):
     :return: sparql result querry
     """
     # Define MeSH sparql endpoint and query
-    endpoint = 'http://id.nlm.nih.gov/mesh/sparql'
+    endpointmesh = 'http://id.nlm.nih.gov/mesh/sparql'
     qmesh = (
             'PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>'
             'PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>'
@@ -681,7 +683,7 @@ def sparqlquery(thesaurus, term):
                                                       '}'
     )
     # Define agrovoc sparql endpoint and query
-    endpoint = 'http://agrovoc.uniroma2.it/sparql'
+    endpointagrovoc = 'http://agrovoc.uniroma2.it/sparql'
     qagrovoc = ('PREFIX skos: <http://www.w3.org/2004/02/skos/core#> '
                 'PREFIX skosxl: <http://www.w3.org/2008/05/skos-xl#> '
                 'ask WHERE {'
@@ -692,8 +694,10 @@ def sparqlquery(thesaurus, term):
     # query mesh
     if thesaurus == "agrovoc":
         q = qagrovoc
+        endpoint = endpointagrovoc
     elif thesaurus == "mesh":
         q = qmesh
+        endpoint = endpointmesh
     else:
         raise Exception('Wrong thesaurus given')
     result = sparql.query(endpoint, q)
@@ -709,7 +713,7 @@ def agrovocCoverage(pdterms):
     # Add a agrovoc column boolean type : True if terms is in Agrovoc
     pdterms['agrovoc'] = False
     # Loop on term
-    for index, row in pdterms.iterrows():
+    for index, row in tqdm(pdterms.iterrows(), total=pdterms.shape[0], desc="agrovoc"):
         # Build SPARQL query
         term = row['terms']
         result = sparqlquery('agrovoc', term)
@@ -728,7 +732,7 @@ def meshCoverage(pdterms):
     # Add a MeSH column boolean type : True if terms is in Mesh
     pdterms['mesh'] = False
     # Loop on term with multiprocessing
-    for index, row in pdterms.iterrows():
+    for index, row in tqdm(pdterms.iterrows(), total=pdterms.shape[0], desc="mesh"):
         # Build SPARQL query
         term = row['terms']
         result = sparqlquery('mesh', term)
@@ -793,8 +797,8 @@ if __name__ == '__main__':
     ### TF-IDF
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
-    tfidf = agrovocCoverage(tfidf)
     tfidf = meshCoverage(tfidf)
+    tfidf = agrovocCoverage(tfidf)
     tfidf.to_csv(tfidfpath)
     print("TF-IDF thesaurus comparison: done")
 
