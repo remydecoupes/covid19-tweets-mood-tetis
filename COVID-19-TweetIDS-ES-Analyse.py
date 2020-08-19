@@ -702,8 +702,10 @@ def sparqlquery(thesaurus, term):
     else:
         raise Exception('Wrong thesaurus given')
     try:
-        result = sparql.query(endpoint, q)
-    # Sometimes Endpoint can bug on a request.
+        result = sparql.query(endpoint, q, timeout=30)
+        # Sometimes Endpoint can bug on a request.
+            # SparqlException raised by sparql-client if timeout is reach
+            # other exception (That I have not identify yet) when endpoint send non well formated answer
     except:
         result = "endpoint error"
     return result
@@ -813,8 +815,8 @@ if __name__ == '__main__':
     ### TF-IDF
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
-    tfidf = meshCoverage(tfidf)
     tfidf = agrovocCoverage(tfidf)
+    tfidf = meshCoverage(tfidf)
     tfidf.to_csv(tfidfpath)
     print("TF-IDF thesaurus comparison: done")
 
