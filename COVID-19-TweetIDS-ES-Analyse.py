@@ -28,6 +28,7 @@ from nltk.corpus import wordnet
 import sparql
 # progress bar
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 # multiprocessing
 
@@ -814,6 +815,7 @@ if __name__ == '__main__':
     # Thesaurus coverage : Are the terms in Wordnet / Agrovoc / MeSH
     ## open measures results and add a column for each thesaurus
     ### TF-IDF
+    """
     tfidf = pd.read_csv(tfidfpath)
     tfidf = wordnetCoverage(tfidf)
     tfidf = agrovocCoverage(tfidf)
@@ -838,8 +840,13 @@ if __name__ == '__main__':
     htfidf = meshCoverage(htfidf)
     htfidf.to_csv(htfidfStackedPAth)
     print("H-TFIDF thesaurus comparison: done")
+    """
 
     ## Percent of Coverage : print
+    tfidf = pd.read_csv(tfidfpath)
+    tf = pd.read_csv(tfpath)
+    htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
+    htfidf = pd.read_csv(htfidfStackedPAth)
     ### Limit to a maximun numbers of terms
     nfirstterms = 100
     ### TF-IDF
@@ -859,11 +866,14 @@ if __name__ == '__main__':
 
     ## plot graph coverage depending nb first elements
     ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
-    min_len = min(tfidf, tf, htfidf)
+    min_len = min(tfidf.shape[0], tf.shape[0], htfidf.shape[0])
 
-    nbfirstelementsRange = range(min_len)
-    col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs']
+    ### Building dataframes containing percent of thesaurus coverage to plot
+    nbfirstelementsRange = range(1,min_len)
+    col = ['h-tfidf', 'tf-idf', 'tf', 'Number_of_the_first_terms_extracted']
     wordnetCoverageByNbofterms = pd.DataFrame(columns=col)
+    agrovocCoverageByBbofterms = pd.DataFrame(columns=col)
+    meshCoverageByBbofterms = pd.DataFrame(columns=col)
     for i, nb in enumerate(nbfirstelementsRange):
         htfidfd = htfidf[0:nb]
         tfidfd = tfidf[0:nb]
@@ -872,16 +882,52 @@ if __name__ == '__main__':
             "h-tfidf": len(htfidfd[htfidfd.wordnet == True]) / nb,
             'tf-idf': len(tfidfd[tfidfd.wordnet == True]) / nb,
             'tf': len(tfd[tfd.wordnet == True]) / nb,
-            'nbFirsTemrs': nb
+            'Number_of_the_first_terms_extracted': nb
         }
         wordnetCoverageByNbofterms.loc[i] = row
-    print(wordnetCoverageByNbofterms)
-    ax = wordnetCoverageByNbofterms.plot(x='nbFirsTemrs', y=['h-tfidf', 'tf-idf', 'tf'], kind='line')
-    ax.set(
+        row = {
+            "h-tfidf": len(htfidfd[htfidfd.agrovoc == True]) / nb,
+            'tf-idf': len(tfidfd[tfidfd.agrovoc == True]) / nb,
+            'tf': len(tfd[tfd.agrovoc == True]) / nb,
+            'Number_of_the_first_terms_extracted': nb
+        }
+        agrovocCoverageByBbofterms.loc[i] = row
+        row = {
+            "h-tfidf": len(htfidfd[htfidfd.mesh == True]) / nb,
+            'tf-idf': len(tfidfd[tfidfd.mesh == True]) / nb,
+            'tf': len(tfd[tfd.mesh == True]) / nb,
+            'Number_of_the_first_terms_extracted': nb
+        }
+        meshCoverageByBbofterms.loc[i] = row
+
+    ### Define the figure and its axes
+    fig, axes = plt.subplots(nrows=3, ncols=1)
+    axes[0].set(
         xlabel='Number of the first n elements',
         ylabel='Percentage of terms in wordnet',
-        title='Percentage of terms in wordnet by measures H-TFIDF / TF-IDF / TF'
+        title='Wordnet'
     )
-    # plt.show()
-    ax.get_figure().savefig("elasticsearch/analyse/wordnetcov.png")
+    axes[0].xaxis.set_visible(False)
+    wordnetCoverageByNbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[0])
+    axes[1].set(
+        xlabel='Number of the first n elements',
+        ylabel='Percentage of terms in Agrovoc',
+        title='Agrovoc'
+    )
+    axes[1].xaxis.set_visible(False)
+    agrovocCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[1])
+    axes[2].set(
+        xlabel='Number of the first n elements',
+        ylabel='Percentage of terms in MeSH',
+        title='MeSH'
+    )
+    #axes[2].xaxis.set_visible(False)
+    meshCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[2])
+    # As we hide xlabel for each subplots, we want to share one xlabel below the figure
+    # fig.text(0.32, 0.04, "Number of the first n elements")
+    fig.suptitle("Percentage of terms in Wordnet / Agrovoc / MesH \nby measures H-TFIDF / TF-IDF / TF")
+    fig.set_size_inches(8, 15)
+    plt.show()
+    #fig.savefig("elasticsearch/analyse/thesaurus_coverage.png")
+
     print("end")
