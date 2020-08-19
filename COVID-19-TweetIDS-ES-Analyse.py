@@ -547,6 +547,7 @@ def HTFIDF_comparewith_TFIDF_TF():
             - period
             - list of Cities
         - Pass files path in args
+        - Pass number of term to extract for TF-IDF and TF
     Gives commons and specifics terms between H-TFIDF and TF & TF-IDF classics
     Creates 6 csv files : 3 for earch classical measures :
         - Common.csv : list of common terms
@@ -728,10 +729,10 @@ def agrovocCoverage(pdterms):
         result = sparqlquery('agrovoc', term)
         if result == "endpoint error":
             endpointerror += 1
-            pdterms.at[index, 'mesh'] = "Error"
+            pdterms.at[index, 'agrovoc'] = "Error"
         elif result.hasresult():
             pdterms.at[index, 'agrovoc'] = True
-    print("Agrovoc number of error: "+endpointerror)
+    print("Agrovoc number of error: " + str(endpointerror))
     return pdterms
 
 
@@ -755,7 +756,7 @@ def meshCoverage(pdterms):
             pdterms.at[index, 'mesh'] = "Error"
         elif result.hasresult():
             pdterms.at[index, 'mesh'] = True
-    print("Mesh number of error: " + endpointerror)
+    print("Mesh number of error: " + str(endpointerror))
     return pdterms
 
 
