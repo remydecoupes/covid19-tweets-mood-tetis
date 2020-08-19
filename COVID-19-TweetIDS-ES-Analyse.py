@@ -858,7 +858,10 @@ if __name__ == '__main__':
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
 
     ## plot graph coverage depending nb first elements
-    nbfirstelementsRange = [10, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+    ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
+    min_len = min(tfidf, tf, htfidf)
+
+    nbfirstelementsRange = range(min_len)
     col = ['h-tfidf', 'tf-idf', 'tf', 'nbFirsTemrs']
     wordnetCoverageByNbofterms = pd.DataFrame(columns=col)
     for i, nb in enumerate(nbfirstelementsRange):
