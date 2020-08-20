@@ -28,7 +28,9 @@ from nltk.corpus import wordnet
 import sparql
 # progress bar
 from tqdm import tqdm
+# ploting
 import matplotlib.pyplot as plt
+from matplotlib_venn_wordcloud import venn3_wordcloud
 
 # multiprocessing
 
@@ -847,8 +849,9 @@ if __name__ == '__main__':
     tf = pd.read_csv(tfpath)
     htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
     htfidf = pd.read_csv(htfidfStackedPAth)
+    """
     ### Limit to a maximun numbers of terms
-    nfirstterms = 100
+    nfirstterms = 50
     ### TF-IDF
     tfidfd = tfidf[0:nfirstterms]
     tfidfPercentInWordnet = len(tfidfd[tfidfd.wordnet == True]) / nfirstterms
@@ -863,6 +866,7 @@ if __name__ == '__main__':
     htfidfd = htfidf[0:nfirstterms]
     htfidfPercentInWordnet = len(htfidfd[htfidfd.wordnet == True]) / nfirstterms
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
+    """
 
     ## plot graph coverage depending nb first elements
     ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
@@ -927,7 +931,63 @@ if __name__ == '__main__':
     # fig.text(0.32, 0.04, "Number of the first n elements")
     fig.suptitle("Percentage of terms in Wordnet / Agrovoc / MesH \nby measures H-TFIDF / TF-IDF / TF")
     fig.set_size_inches(8, 15)
-    plt.show()
+    #plt.show()
     #fig.savefig("elasticsearch/analyse/thesaurus_coverage.png")
+
+    ## Venn diagram & wordcloud
+    ## /!\ I have to modify source of matplotlib_venn_wordcloud/_main.py to have a good layout ...
+    nb_of_terms = 99
+    htfidfd = htfidf[0:nb_of_terms]
+    tfidfd = tfidf[0:nb_of_terms]
+    tfd = tf[0:nb_of_terms]
+    ### Plot by measure, venn diagram of Wordnet / Agrovoc / MeSH
+    figvenn, axvenn = plt.subplots(1, 3)
+    figvenn.set_size_inches(15, 8)
+    #### H-TFIDF
+    sets = []
+    sets.append(set(htfidfd.terms[htfidfd.wordnet == True]))
+    sets.append(set(htfidfd.terms[htfidfd.agrovoc == True]))
+    sets.append(set(htfidfd.terms[htfidfd.mesh == True]))
+    axvenn[0].set_title("H-TFIDF Thesaurus coverage", fontsize=20)
+    htfidf_ven = venn3_wordcloud(sets,
+                                 set_labels=['wordnet', '  agrovoc', '             mesh'],
+                                 wordcloud_kwargs=dict(min_font_size=4),
+                                 ax=axvenn[0])
+    for label in htfidf_ven.set_labels:
+        label.set_fontsize(15)
+    #### TFIDF
+    sets = []
+    sets.append(set(tfidfd.terms[tfidfd.wordnet == True]))
+    sets.append(set(tfidfd.terms[tfidfd.agrovoc == True]))
+    sets.append(set(tfidfd.terms[tfidfd.mesh == True]))
+    axvenn[1].set_title("TF-IDF Thesaurus coverage", fontsize=20)
+    tfidf_venn = venn3_wordcloud(sets,
+                                 set_labels=['wordnet', '  agrovoc', '             mesh'],
+                                 wordcloud_kwargs=dict(min_font_size=4),
+                                 ax=axvenn[1])
+    print(tfidf_venn.get_words_by_id("100"))
+    print(tfidf_venn.get_words_by_id("110"))
+    print(tfidf_venn.get_words_by_id("111"))
+    print(tfidf_venn.get_words_by_id("101"))
+    print(tfidfd.shape)
+    for label in tfidf_venn.set_labels:
+        label.set_fontsize(15)
+    #### TF
+    sets = []
+    sets.append(set(tfd.terms[tfd.wordnet == True]))
+    sets.append(set(tfd.terms[tfd.agrovoc == True]))
+    sets.append(set(tfd.terms[tfd.mesh == True]))
+    axvenn[2].set_title("TF Thesaurus coverage", fontsize=20)
+    tf_venn = venn3_wordcloud(sets,
+                              set_labels=['wordnet', '  agrovoc', '             mesh'],
+                              wordcloud_kwargs=dict(min_font_size=4),
+                              #wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
+                              #set_colors=['r', 'g', 'b'],
+                              #alpha=0.8,
+                              ax=axvenn[2])
+    for label in tf_venn.set_labels:
+        label.set_fontsize(15)
+
+    plt.show()
 
     print("end")
