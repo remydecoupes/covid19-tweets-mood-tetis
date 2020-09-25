@@ -1015,6 +1015,7 @@ if __name__ == '__main__':
     ### TF-IDF
     tfidf_state_coverage = \
         tfidf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
+    tfidf_state_coverage.set_index('terms', inplace=True)
     for state in es_tweets_results_filtred_aggstate.index:
         tfidf_state_coverage = \
             tfidf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
@@ -1022,6 +1023,7 @@ if __name__ == '__main__':
     ### TF
     tf_state_coverage = \
         tf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
+    tf_state_coverage.set_index('terms', inplace=True)
     for state in es_tweets_results_filtred_aggstate.index:
         tf_state_coverage = \
             tf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
