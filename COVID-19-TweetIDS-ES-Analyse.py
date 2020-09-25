@@ -868,6 +868,9 @@ if __name__ == '__main__':
     print("H-TFIDF wordnet coverage for the", nfirstterms, "first terms: ", htfidfPercentInWordnet)
     """
 
+    """
+    #Comment thesaurus coverage
+    
     ## plot graph coverage depending nb first elements
     ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
     min_len = min(tfidf.shape[0], tf.shape[0], htfidf.shape[0])
@@ -989,5 +992,8 @@ if __name__ == '__main__':
         label.set_fontsize(15)
 
     plt.show()
+    
+    # End of thesaurus coverage
+    """
 
     print("end")
