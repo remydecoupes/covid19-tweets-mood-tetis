@@ -869,7 +869,7 @@ if __name__ == '__main__':
     """
 
     """
-    #Comment thesaurus coverage
+    #Point 6 Comment thesaurus coverage
     
     ## plot graph coverage depending nb first elements
     ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
@@ -996,7 +996,7 @@ if __name__ == '__main__':
     # End of thesaurus coverage
     """
 
-    # Start Mathieu's evaluation : count  the number of TF / TF-IDF / H-TFIDF terms for each states
+    # Point 7 : count  the number of TF / TF-IDF / H-TFIDF terms for each states
     nb_of_extracted_terms_from_mesure = 100
     ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
     es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
@@ -1034,6 +1034,10 @@ if __name__ == '__main__':
         df = htfidf.loc[state].to_frame().set_index(state).join(es_tweets_results_filtred_aggstate.loc[state], how="left")
         df.to_csv("elasticsearch/analyse/state_coverage/htfidf_"+state+".csv")
 
-    #End of Mathieu's evaluation
+    # end Point 7
+
+    # Point 8 : Get K frequent terms for each state's tweets and see percentage coverage with the 3 measures
+    # end point 8
+
 
     print("end")

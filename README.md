@@ -39,3 +39,5 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
 4. [Query](elasticsearch/analyse/Elasticquery.md) elasticsearch to extract tweets inside a specific spatio-temporal windows
 5. [Build an adaptive TF-IDF on this extraction of tweets & analyse results](COVID-19-TweetIDS-ES-Analyse.py)
 6. Match term extracted by our various methods with thesaurus like Agrovoc or MeSH using [SPARQL](elasticsearch/analyse/sparqlquery.md)
+7. For the 3 measures first 100 terms : compares occurence of terms in states aggregated tweets
+8. For the K most frequent terms in state aggregated tweets : compute % of the 3 measures coverage
