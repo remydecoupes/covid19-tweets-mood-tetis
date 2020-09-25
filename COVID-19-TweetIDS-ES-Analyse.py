@@ -996,4 +996,31 @@ if __name__ == '__main__':
     # End of thesaurus coverage
     """
 
+    # Start Mathieu's evaluation : count  the number of TF / TF-IDF / H-TFIDF terms for each states
+    nb_of_extracted_terms_from_mesure = 100
+    ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
+    es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    es_tweets_results_filtred = spatiotemporelFilter(es_tweets_results, listOfcities=listOfCity, spatialLevel='state',
+                                                     period=tfidfPeriod)
+    ## Aggregate by state
+    ### Create 4 new columns : city, State, Country and date
+    def splitindex(row):
+        return row.split("_")
+
+    es_tweets_results_filtred["city"], es_tweets_results_filtred["state"], es_tweets_results_filtred["country"], \
+    es_tweets_results_filtred["date"] = zip(*es_tweets_results_filtred.index.map(splitindex))
+    es_tweets_results_filtred_aggstate = es_tweets_results_filtred.groupby("state").sum()
+
+    ## Build a table for each measures and compute nb of occurences by states
+    ### TF-IDF
+    tfidf_state_coverage = \
+        tfidf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
+    for state in es_tweets_results_filtred_aggstate.index:
+        tfidf_state_coverage = \
+            tfidf_state_coverage.set_index('terms').join(es_tweets_results_filtred_aggstate.loc[state], how='left')
+    tfidf_state_coverage.to_csv("elasticsearch/analyse/fidf_state_coverage.csv")
+
+
+    #End of Mathieu's evaluation
+
     print("end")
