@@ -1019,7 +1019,7 @@ if __name__ == '__main__':
     for state in es_tweets_results_filtred_aggstate.index:
         tfidf_state_coverage = \
             tfidf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
-    tfidf_state_coverage.to_csv("elasticsearch/analyse/tfidf_state_coverage.csv")
+    tfidf_state_coverage.to_csv("elasticsearch/analyse/state_coverage/tfidf_state_coverage.csv")
     ### TF
     tf_state_coverage = \
         tf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
@@ -1027,8 +1027,12 @@ if __name__ == '__main__':
     for state in es_tweets_results_filtred_aggstate.index:
         tf_state_coverage = \
             tf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
-    tf_state_coverage.to_csv("elasticsearch/analyse/tf_state_coverage.csv")
-
+    tf_state_coverage.to_csv("elasticsearch/analyse/state_coverage/tf_state_coverage.csv")
+    ### H-TFIDF
+    htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    for state in es_tweets_results_filtred_aggstate.index:
+        df = htfidf.loc[state].to_frame().set_index(state).join(es_tweets_results_filtred_aggstate.loc[state], how="left")
+        df.to_csv("elasticsearch/analyse/state_coverage/htfidf_"+state+".csv")
 
     #End of Mathieu's evaluation
 
