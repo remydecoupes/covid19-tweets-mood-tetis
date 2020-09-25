@@ -1017,8 +1017,15 @@ if __name__ == '__main__':
         tfidf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
     for state in es_tweets_results_filtred_aggstate.index:
         tfidf_state_coverage = \
-            tfidf_state_coverage.set_index('terms').join(es_tweets_results_filtred_aggstate.loc[state], how='left')
-    tfidf_state_coverage.to_csv("elasticsearch/analyse/fidf_state_coverage.csv")
+            tfidf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
+    tfidf_state_coverage.to_csv("elasticsearch/analyse/tfidf_state_coverage.csv")
+    ### TF
+    tf_state_coverage = \
+        tf[['terms', 'score', 'wordnet', 'agrovoc', 'mesh']].iloc[0:nb_of_extracted_terms_from_mesure]
+    for state in es_tweets_results_filtred_aggstate.index:
+        tf_state_coverage = \
+            tf_state_coverage.join(es_tweets_results_filtred_aggstate.loc[state], how='left')
+    tf_state_coverage.to_csv("elasticsearch/analyse/tf_state_coverage.csv")
 
 
     #End of Mathieu's evaluation
