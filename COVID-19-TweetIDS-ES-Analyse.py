@@ -1069,9 +1069,16 @@ if __name__ == '__main__':
         on="terms",
         how='left'
     )["score"]
-
-
+    ## save in CSV
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
+    ## build barchart
+    barchart_col = ["tf", "tf-idf", "h-tfidf"]
+    barchart = pd.DataFrame(columns=barchart_col, index=range(1))
+    barchart.tf = state_frequent_terms_by_measure.tf.count() / len(state_frequent_terms_by_measure) * 100
+    barchart["tf-idf"] = state_frequent_terms_by_measure["tf-idf"].count() / len(state_frequent_terms_by_measure) * 100
+    barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(state_frequent_terms_by_measure) * 100
+    barchart.plot.bar()
+    plt.show()
     # end point 8
 
 
