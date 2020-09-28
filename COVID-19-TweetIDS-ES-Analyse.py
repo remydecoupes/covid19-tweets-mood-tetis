@@ -1049,21 +1049,26 @@ if __name__ == '__main__':
             es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms].index
         state_frequent_terms_by_measure["occurence"][i * k_first_terms:(i + 1) * k_first_terms] = \
             es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms]
-        state_frequent_terms_by_measure["tf"] = state_frequent_terms_by_measure.join(
-                tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-                on="terms",
-                how='left'
-            )["score"]
-        state_frequent_terms_by_measure["tf-idf"] = state_frequent_terms_by_measure.join(
-            tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+        htfidf_state = htfidf.loc[state].iloc[0:nb_of_extracted_terms_from_mesure]
+        htfidf_state.rename("terms", inplace=True)
+        htfidf_state = htfidf_state.to_frame().set_index("terms")
+        htfidf_state["value"] = htfidf_state.index
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "h-tfidf"] = \
+            state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state].join(
+            htfidf_state,
             on="terms",
-            how='left'
-        )["score"]
-        state_frequent_terms_by_measure["h-tfidf"] = state_frequent_terms_by_measure.join(
-            htfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-            on="terms",
-            how='left'
-        )["score"]
+            how='left',
+        )["value"]
+    state_frequent_terms_by_measure["tf"] = state_frequent_terms_by_measure.join(
+        tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+        on="terms",
+        how='left'
+    )["score"]
+    state_frequent_terms_by_measure["tf-idf"] = state_frequent_terms_by_measure.join(
+        tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+        on="terms",
+        how='left'
+    )["score"]
 
 
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
