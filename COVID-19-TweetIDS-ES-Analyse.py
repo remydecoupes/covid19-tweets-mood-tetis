@@ -1079,7 +1079,9 @@ if __name__ == '__main__':
     barchart.tf = state_frequent_terms_by_measure.tf.count() / len(state_frequent_terms_by_measure) * 100
     barchart["tf-idf"] = state_frequent_terms_by_measure["tf-idf"].count() / len(state_frequent_terms_by_measure) * 100
     barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(state_frequent_terms_by_measure) * 100
-    barchart.plot.bar()
+    barchart = barchart.transpose()
+    barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
+                      legend=False)
     plt.show()
     # end point 8
 
