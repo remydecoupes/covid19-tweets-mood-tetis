@@ -1059,16 +1059,18 @@ if __name__ == '__main__':
             on="terms",
             how='left',
         )["value"]
-    state_frequent_terms_by_measure["tf"] = state_frequent_terms_by_measure.join(
-        tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-        on="terms",
-        how='left'
-    )["score"]
-    state_frequent_terms_by_measure["tf-idf"] = state_frequent_terms_by_measure.join(
-        tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-        on="terms",
-        how='left'
-    )["score"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf"] = \
+            state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
+            tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+            on="terms",
+            how='left'
+        )["score"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] =\
+            state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
+            tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+            on="terms",
+            how='left'
+        )["score"]
     ## save in CSV
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
     ## build barchart
