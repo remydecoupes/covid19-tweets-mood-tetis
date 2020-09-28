@@ -1037,6 +1037,36 @@ if __name__ == '__main__':
     # end Point 7
 
     # Point 8 : Get K frequent terms for each state's tweets and see percentage coverage with the 3 measures
+    k_first_terms = 100 # from each state get k first most frequent word
+    nb_of_extracted_terms_from_mesure = 100 # from each measure, take nb first terms extract
+    state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
+    state_frequent_terms_by_measure = \
+        pd.DataFrame(columns=state_frequent_terms_by_measure_col,
+                     index=range(k_first_terms * len(es_tweets_results_filtred_aggstate.index)))
+    for i, state in enumerate(es_tweets_results_filtred_aggstate.index):
+        state_frequent_terms_by_measure["state"][i * k_first_terms:(i + 1) * k_first_terms] = state
+        state_frequent_terms_by_measure["terms"][i * k_first_terms:(i + 1) * k_first_terms] = \
+            es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms].index
+        state_frequent_terms_by_measure["occurence"][i * k_first_terms:(i + 1) * k_first_terms] = \
+            es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms]
+        state_frequent_terms_by_measure["tf"] = state_frequent_terms_by_measure.join(
+                tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+                on="terms",
+                how='left'
+            )["score"]
+        state_frequent_terms_by_measure["tf-idf"] = state_frequent_terms_by_measure.join(
+            tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+            on="terms",
+            how='left'
+        )["score"]
+        state_frequent_terms_by_measure["h-tfidf"] = state_frequent_terms_by_measure.join(
+            htfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+            on="terms",
+            how='left'
+        )["score"]
+
+
+    state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
     # end point 8
 
 

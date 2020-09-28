@@ -43,6 +43,7 @@ elasticsearch/analyse/biotexonhiccs/*
 elasticsearch/analyse/TFIDFClassical/*
 elasticsearch/analyse/*.ods
 elasticsearch/analyse/TFClassical/*
+elasticsearch/analyse/state_coverage/*
 
 
 
