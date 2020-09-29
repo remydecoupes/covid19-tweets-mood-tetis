@@ -1215,18 +1215,18 @@ if __name__ == '__main__':
     tfidf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
     ## digramm Venn between H-TFIDF and TF / TF-IDF with corpus = state
     ### Subslicing : to 400 terms
-    nb_of_terms = 25
-    htfidf_slice = htfidf[0:nb_of_terms]
-    #tf_corpus_state_slice = tf_corpus_state[0:nb_of_terms]
-    #tfidf_corpus_state_slice = tfidf_corpus_state[0:nb_of_terms]
-    set_venn = pd.DataFrame(columns=["htfidf", "tfidf", "tf"], index=range(4*nb_of_terms))
+    nb_of_terms_by_states = 25
+    htfidf_slice = htfidf[0:nb_of_terms_by_states]
+    #tf_corpus_state_slice = tf_corpus_state[0:nb_of_terms_by_states]
+    #tfidf_corpus_state_slice = tfidf_corpus_state[0:nb_of_terms_by_states]
+    set_venn = pd.DataFrame(columns=["htfidf", "tfidf", "tf"], index=range(4*nb_of_terms_by_states))
     listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
     for i, state in enumerate(listOfState):
-        set_venn.loc[i*nb_of_terms:(i+1)*nb_of_terms-1, "htfidf"] = htfidf_slice[state].values
-        set_venn.loc[i * nb_of_terms:(i + 1) * nb_of_terms - 1, "tfidf"] = \
-            tfidf_corpus_state[tfidf_corpus_state.state == state]["terms"].values[0:nb_of_terms]
-        set_venn.loc[i * nb_of_terms:(i + 1) * nb_of_terms - 1, "tf"] = \
-            tf_corpus_state[tf_corpus_state.state == state]["terms"].values[0:nb_of_terms]
+        set_venn.loc[i*nb_of_terms_by_states:(i+1)*nb_of_terms_by_states-1, "htfidf"] = htfidf_slice[state].values
+        set_venn.loc[i * nb_of_terms_by_states:(i + 1) * nb_of_terms_by_states - 1, "tfidf"] = \
+            tfidf_corpus_state[tfidf_corpus_state.state == state]["terms"].values[0:nb_of_terms_by_states]
+        set_venn.loc[i * nb_of_terms_by_states:(i + 1) * nb_of_terms_by_states - 1, "tf"] = \
+            tf_corpus_state[tf_corpus_state.state == state]["terms"].values[0:nb_of_terms_by_states]
     ven_set = []
     for k in set_venn.keys():
         ven_set.append(set(set_venn[k].values))
@@ -1240,7 +1240,29 @@ if __name__ == '__main__':
                                         )
     for label in venn_corpus_state.set_labels:
         label.set_fontsize(15)
-
+    # plt.show()
+    ## barchart
+    tf_unique = venn_corpus_state.get_words_by_id('001')
+    tfidf_unique = venn_corpus_state.get_words_by_id('010')
+    htfidf_unique = venn_corpus_state.get_words_by_id('100')
+    barchart_col = ["tf", "tf-idf", "h-tfidf",
+                    "common_tf_with_h-tfidf", "common_tf-idf_with_h-tfidf", "common_for_all",
+                    "common_tf_tf-idf"]
+    barchart = pd.DataFrame(columns=barchart_col, index=range(1))
+    barchart.tf = len(tf_unique)
+    barchart["tf-idf"] = len(tfidf_unique)
+    barchart["h-tfidf"] = len(htfidf_unique)
+    barchart["common_tf_with_h-tfidf"] = len(venn_corpus_state.get_words_by_id('101'))
+    barchart["common_tf-idf_with_h-tfidf"] = len(venn_corpus_state.get_words_by_id('110'))
+    barchart["common_for_all"] = len(venn_corpus_state.get_words_by_id('111'))
+    barchart["common_tf_tf-idf"] = len(venn_corpus_state.get_words_by_id('011'))
+    barchart = barchart.transpose()
+    barchart.plot.bar(title="Number of specific word by measures",
+                      legend=False)
+    words = len(tf_unique) + len(tfidf_unique) + len(htfidf_unique) + len(venn_corpus_state.get_words_by_id('101')) + \
+            len(venn_corpus_state.get_words_by_id('110')) + len(venn_corpus_state.get_words_by_id('111')) +\
+            len(venn_corpus_state.get_words_by_id('011'))
+    # print("nb_of_words: "+str(words))
     plt.show()
     # end point 9
 
