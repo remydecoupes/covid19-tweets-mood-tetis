@@ -868,8 +868,8 @@ def TFIDF_TF_with_corpus_state():
         extractBiggestTF["state"] = state
         extractBiggestTF_allstates = extractBiggestTFIDF_allstates.append(extractBiggestTF, ignore_index=True)
     
-    extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore_"+state+".csv")
-    extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore_" + state + ".csv")
+    extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
+    extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
 
 
 if __name__ == '__main__':
@@ -1202,8 +1202,17 @@ if __name__ == '__main__':
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
     ## Compute TF / TF-IDF by state
-    TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
+    #TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
+    ## diagramm de Venn
+    ### open CSV Files
+    #### H-TFIDF
+    htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    #### TF
+    tf_corpus_uk = pd.read_csv("elasticsearch/analyse/TFClassical/TFclassicalBiggestScore.csv")
+    tf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
+    #### TF-IDF
+    tfidf_corpus_uk = pd.read_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
+    tfidf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
     # end point 9
-
 
     print("end")
