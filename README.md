@@ -39,11 +39,22 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
 4. [Query](elasticsearch/analyse/Elasticquery.md) elasticsearch to extract tweets inside a specific spatio-temporal windows
 5. [Build an adaptive TF-IDF on this extraction of tweets & analyse results](COVID-19-TweetIDS-ES-Analyse.py)
 6. Match term extracted by our various methods with thesaurus like Agrovoc or MeSH using [SPARQL](elasticsearch/analyse/sparqlquery.md)
+    
+    Compute the percentage of terms extracting by TF / TF-IDF / H-TF-IDF **included** in the 4 thesuarus : Wordnet / Agrovoc / Mesh
+    
+    ![eval 6](readme_ressources/thesaurus_coverage.png)
+    ![eval 6 - 2](readme_ressources/venn_wordcloud.png)
 7. For the 3 measures first 100 terms : compares occurence of terms in states aggregated tweets
 8. For the K most frequent terms in state aggregated tweets : compute % of the 3 measures coverage
+
+    The aim is to compute % of overlapping between the K most frequent words using by state (i.e : concat all tweets by state) **with** N terms extracted by TF / TF-IDF / H-TF-IDF.
+    TF and TF-IDF have been parameterized with Doc = 1 tweet and Corpus = UK.
+    
+    ![eval 8](readme_ressources/barchcart_bystate.png "Evaluation of point 8")
 9. Evaluation with different TF / TF-IDF settings : work on corpus and document 
 
-| H-TF-IDF  |  TF / TF-IDF UK | TF / TF-IDF by state |
-|:---|:---|:---|
-| Doc: All tweets aggregate by state  | Doc : 1 tweet  | Doc : 1 tweet  |
-| Corpus: UK  | Corpus: UK  | Corpus: for each state  |
+    | H-TF-IDF  |  TF / TF-IDF UK | TF / TF-IDF by state |
+    |:---|:---|:---|
+    | Doc: All tweets aggregate by state  | Doc : 1 tweet  | Doc : 1 tweet  |
+    | Corpus: UK  | Corpus: UK  | Corpus: for each state  |
+10. 
