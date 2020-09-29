@@ -57,4 +57,5 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     |:---|:---|:---|
     | Doc: All tweets aggregate by state  | Doc : 1 tweet  | Doc : 1 tweet  |
     | Corpus: UK  | Corpus: UK  | Corpus: for each state  |
+    For the past evaluations, we use TF/TF-IDF with Doc = 1 tweet and Corpus = UK. During the presentation on text mining activities with the Executive Board of MOOD (2020-09-01), Bruno Martins suggest us to compare H-TF-IDF with TF / TF-IDF on corpus = state.
 10. 

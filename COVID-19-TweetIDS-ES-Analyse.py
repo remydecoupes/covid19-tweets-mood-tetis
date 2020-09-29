@@ -1090,6 +1090,7 @@ if __name__ == '__main__':
     # end point 8
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
+    ## Compute TF / TF-IDF by state
 
     # end point 9
 
