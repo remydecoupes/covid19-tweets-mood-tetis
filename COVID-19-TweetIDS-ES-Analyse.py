@@ -866,7 +866,7 @@ def TFIDF_TF_with_corpus_state():
         del extractBiggestTF['old-index']
         extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
         extractBiggestTF["state"] = state
-        extractBiggestTF_allstates = extractBiggestTFIDF_allstates.append(extractBiggestTF, ignore_index=True)
+        extractBiggestTF_allstates = extractBiggestTF_allstates.append(extractBiggestTF, ignore_index=True)
     
     extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
     extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
@@ -1202,7 +1202,7 @@ if __name__ == '__main__':
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
     ## Compute TF / TF-IDF by state
-    # TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
+    TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
     ## open CSV Files
     ### H-TFIDF
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
