@@ -1202,17 +1202,44 @@ if __name__ == '__main__':
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
     ## Compute TF / TF-IDF by state
-    #TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
-    ## diagramm de Venn
-    ### open CSV Files
-    #### H-TFIDF
+    # TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
+    ## open CSV Files
+    ### H-TFIDF
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
-    #### TF
+    htfidf = htfidf.transpose()
+    ### TF
     tf_corpus_uk = pd.read_csv("elasticsearch/analyse/TFClassical/TFclassicalBiggestScore.csv")
     tf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
-    #### TF-IDF
+    ### TF-IDF
     tfidf_corpus_uk = pd.read_csv("elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv")
     tfidf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
+    ## digramm Venn between H-TFIDF and TF / TF-IDF with corpus = state
+    ### Subslicing : to 400 terms
+    nb_of_terms = 100
+    htfidf_slice = htfidf[0:nb_of_terms]
+    #tf_corpus_state_slice = tf_corpus_state[0:nb_of_terms]
+    #tfidf_corpus_state_slice = tfidf_corpus_state[0:nb_of_terms]
+    set_venn = pd.DataFrame(columns=["htfidf", "tfidf", "tf"], index=range(4*nb_of_terms))
+    listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
+    for i, state in enumerate(listOfState):
+        set_venn.loc[i*nb_of_terms:(i+1)*nb_of_terms-1, "htfidf"] = htfidf_slice[state].values
+        set_venn.loc[i * nb_of_terms:(i + 1) * nb_of_terms - 1, "tfidf"] = \
+            tfidf_corpus_state[tfidf_corpus_state.state == state]["terms"].values[0:100]
+        set_venn.loc[i * nb_of_terms:(i + 1) * nb_of_terms - 1, "tf"] = \
+            tf_corpus_state[tf_corpus_state.state == state]["terms"].values[0:100]
+    """
+    venn_corpus_state = venn3_wordcloud(sets,
+                              set_labels=['wordnet', '  agrovoc', '             mesh'],
+                              wordcloud_kwargs=dict(min_font_size=4),
+                              #wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
+                              #set_colors=['r', 'g', 'b'],
+                              #alpha=0.8,
+                              ax=axvenn[2])
+    for label in tf_venn.set_labels:
+        label.set_fontsize(15)
+
+    plt.show()
+    """
     # end point 9
 
     print("end")
