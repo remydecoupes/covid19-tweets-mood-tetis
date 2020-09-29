@@ -552,7 +552,7 @@ def HTFIDF_comparewith_TFIDF_TF():
         - Pass files path in args
         - Pass number of term to extract for TF-IDF and TF
     Gives commons and specifics terms between H-TFIDF and TF & TF-IDF classics
-    Creates 6 csv files : 3 for earch classical measures :
+    Creates 6 csv files : 3 for each classical measures :
         - Common.csv : list of common terms
         - specific-htfidf : terms only in H-TF-IDF
         - specific-reference : terms only in one classical measurs
@@ -578,7 +578,7 @@ def HTFIDF_comparewith_TFIDF_TF():
     matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
     matrixAllTweets["time"] = [d.time() for d in matrixAllTweets['created_at']]
 
-    #  Filter by a period
+    # Filter by a period
     mask = ((matrixAllTweets["date"] >= tfidfPeriod.min()) & (matrixAllTweets["date"] <= tfidfPeriod.max()))
     matrixAllTweets = matrixAllTweets.loc[mask]
 
@@ -761,6 +761,115 @@ def meshCoverage(pdterms):
             pdterms.at[index, 'mesh'] = True
     print("Mesh number of error: " + str(endpointerror))
     return pdterms
+
+def TFIDF_TF_with_corpus_state():
+    """
+    eval 9
+    .. warnings::
+        - Copy paste from HTFIDF_comparewith_TFIDF_TF()
+        - /!\ under dev !!!. See TODO below
+    .. todo::
+        - Remove filter and pass it as args :
+            - period
+            - list of Cities
+        - Pass files path in args
+        - Pass number of term to extract for TF-IDF and TF
+    """
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
+
+    # Query Elasticsearch to get all tweets from UK
+    tweets = elasticsearchQuery()
+    # reorganie tweets (dict : tweets by cities) into dataframe (city and date)
+    matrixAllTweets = pd.DataFrame()
+    for tweetByCity in tweets.keys():
+        # pprint(tweets[tweetByCity])
+        # Filter cities :
+        if str(tweetByCity).split("_")[0] in listOfCity:
+            if str(tweetByCity).split("_")[1] == "England":
+                matrix = pd.DataFrame(tweets[tweetByCity])
+                matrix['state'] = "England"
+                matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+            elif str(tweetByCity).split("_")[1] == "Scotland":
+                matrix = pd.DataFrame(tweets[tweetByCity])
+                matrix['state'] = "Scotland"
+                matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+            elif str(tweetByCity).split("_")[1] == "Northern Ireland":
+                matrix = pd.DataFrame(tweets[tweetByCity])
+                matrix['state'] = "Northern Ireland"
+                matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+            elif str(tweetByCity).split("_")[1] == "Wales":
+                matrix = pd.DataFrame(tweets[tweetByCity])
+                matrix['state'] = "Wales"
+                matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+
+    # NB :  28354 results instead of 44841 (from ES) because we work only on tweets with a city found
+    # Split datetime into date and time
+    matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
+    matrixAllTweets["time"] = [d.time() for d in matrixAllTweets['created_at']]
+
+    # Filter by a period
+    mask = ((matrixAllTweets["date"] >= tfidfPeriod.min()) & (matrixAllTweets["date"] <= tfidfPeriod.max()))
+    matrixAllTweets = matrixAllTweets.loc[mask]
+
+    # Compute TF-IDF and TF by state
+    extractBiggestTF_allstates = pd.DataFrame()
+    extractBiggestTFIDF_allstates = pd.DataFrame()
+    for state in listOfState:
+        matrix_by_state = matrixAllTweets[matrixAllTweets.state == state]
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform(matrix_by_state['tweet'])
+        feature_names = vectorizer.get_feature_names()
+        dense = vectors.todense()
+        denselist = dense.tolist()
+        ## matrixTFIDF
+        TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
+        ### Remove stopword
+        for term in TFIDFClassical.keys():
+            if term in stopwords.words('english'):
+                del TFIDFClassical[term]
+        #TFIDFClassical.to_csv("elasticsearch/analyse/point9/tfidf.csv")
+        ## Extract N TOP ranking score
+        top_n = 500
+        extractBiggest = TFIDFClassical.stack().nlargest(top_n)
+        ### Reset index becaus stack create a multi-index (2 level : old index + terms)
+        extractBiggest = extractBiggest.reset_index(level=[0, 1])
+        extractBiggest.columns = ['old-index', 'terms', 'score']
+        del extractBiggest['old-index']
+        extractBiggest = extractBiggest.drop_duplicates(subset='terms', keep="first")
+        extractBiggest["state"] = state
+        extractBiggestTFIDF_allstates = extractBiggestTFIDF_allstates.append(extractBiggest, ignore_index=True)
+
+        # Compute TF
+        tf = CountVectorizer()
+        tf.fit(matrix_by_state['tweet'])
+        tf_res = tf.transform(matrix_by_state['tweet'])
+        listOfTermsTF = tf.get_feature_names()
+        countTerms = tf_res.todense()
+        ## matrixTF
+        TFClassical = pd.DataFrame(countTerms.tolist(), columns=listOfTermsTF)
+        ### Remove stopword
+        for term in TFClassical.keys():
+            if term in stopwords.words('english'):
+                del TFClassical[term]
+        ### save in file
+        # TFClassical.to_csv("elasticsearch/analyse/TFClassical/tfclassical.csv")
+        ## Extract N TOP ranking score
+        top_n = 500
+        extractBiggestTF = TFClassical.stack().nlargest(top_n)
+        ### Reset index becaus stack create a multi-index (2 level : old index + terms)
+        extractBiggestTF = extractBiggestTF.reset_index(level=[0, 1])
+        extractBiggestTF.columns = ['old-index', 'terms', 'score']
+        del extractBiggestTF['old-index']
+        extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
+        extractBiggestTF["state"] = state
+        extractBiggestTF_allstates = extractBiggestTFIDF_allstates.append(extractBiggestTF, ignore_index=True)
+    
+    extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore_"+state+".csv")
+    extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore_" + state + ".csv")
 
 
 if __name__ == '__main__':
@@ -997,6 +1106,7 @@ if __name__ == '__main__':
     """
 
     # Point 7 : count  the number of TF / TF-IDF / H-TFIDF terms for each states
+    """
     nb_of_extracted_terms_from_mesure = 100
     ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
     es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
@@ -1088,10 +1198,11 @@ if __name__ == '__main__':
     )
     plt.show()
     # end point 8
+    """
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
     ## Compute TF / TF-IDF by state
-
+    TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
     # end point 9
 
 
