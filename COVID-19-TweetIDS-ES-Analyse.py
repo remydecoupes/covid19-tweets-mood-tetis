@@ -871,6 +871,35 @@ def TFIDF_TF_with_corpus_state():
     extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
     extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
 
+def compute_occurence_word_by_state():
+    """
+    Count words for tweets aggregate by state.
+    For each state, we concatenate all tweets related.
+    Then we build a table :
+        - columns : all word (our vocabulary)
+        - row : the 4 states of UK
+        - cell : occurence of the word by state
+    :return: pd.Dataframe of occurence of word by states
+    """
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+
+    ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
+    es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    es_tweets_results_filtred = spatiotemporelFilter(es_tweets_results, listOfcities=listOfCity, spatialLevel='state',
+                                                     period=tfidfPeriod)
+    ## Aggregate by state
+    ### Create 4 new columns : city, State, Country and date
+    def splitindex(row):
+        return row.split("_")
+
+    es_tweets_results_filtred["city"], es_tweets_results_filtred["state"], es_tweets_results_filtred["country"], \
+    es_tweets_results_filtred["date"] = zip(*es_tweets_results_filtred.index.map(splitindex))
+    es_tweets_results_filtred_aggstate = es_tweets_results_filtred.groupby("state").sum()
+    return es_tweets_results_filtred_aggstate
+
 
 if __name__ == '__main__':
     print("begin")
@@ -1109,17 +1138,7 @@ if __name__ == '__main__':
     """
     nb_of_extracted_terms_from_mesure = 100
     ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
-    es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-    es_tweets_results_filtred = spatiotemporelFilter(es_tweets_results, listOfcities=listOfCity, spatialLevel='state',
-                                                     period=tfidfPeriod)
-    ## Aggregate by state
-    ### Create 4 new columns : city, State, Country and date
-    def splitindex(row):
-        return row.split("_")
-
-    es_tweets_results_filtred["city"], es_tweets_results_filtred["state"], es_tweets_results_filtred["country"], \
-    es_tweets_results_filtred["date"] = zip(*es_tweets_results_filtred.index.map(splitindex))
-    es_tweets_results_filtred_aggstate = es_tweets_results_filtred.groupby("state").sum()
+    es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
 
     ## Build a table for each measures and compute nb of occurences by states
     ### TF-IDF
@@ -1149,6 +1168,7 @@ if __name__ == '__main__':
     # Point 8 : Get K frequent terms for each state's tweets and see percentage coverage with the 3 measures
     k_first_terms = 100 # from each state get k first most frequent word
     nb_of_extracted_terms_from_mesure = 100 # from each measure, take nb first terms extract
+    es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
     state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
     state_frequent_terms_by_measure = \
         pd.DataFrame(columns=state_frequent_terms_by_measure_col,
