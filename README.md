@@ -51,6 +51,8 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     TF and TF-IDF have been parameterized with Doc = 1 tweet and Corpus = UK.
     
     ![eval 8](readme_ressources/barchcart_bystate.png "Evaluation of point 8")
+    
+    H-TF-IDF works better than TF/TFIDF in general and in particular with small amount of tweets (Nothern Ireland)
 9. Evaluation with different TF / TF-IDF settings : work on corpus and document 
 
     | H-TF-IDF  |  TF / TF-IDF UK | TF / TF-IDF by state |
@@ -69,4 +71,5 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     Few comments: When focus on state, TF and TF-IDF have better overlap with K first terms most frequent in state, except for England (which as much more tweets).
     
     **So what we can say is H-TFIDF work better than TF/ TF-IDF for both on small (show in eval 8) and big (eval 9) amount of tweets** 
-10. 
+10. Evalutate the power of discrimination of H-TFIDF on space
+    For each measure, count the number of word which are retrieve for only one state to show that H-TFIDF can retrieve terms used only in one place

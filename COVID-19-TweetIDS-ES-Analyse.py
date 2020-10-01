@@ -1221,6 +1221,7 @@ if __name__ == '__main__':
     """
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
+    """
     ## Compute TF / TF-IDF by state
     # TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
     ## open CSV Files
@@ -1336,5 +1337,25 @@ if __name__ == '__main__':
     )
     plt.show()
     # end point 9
+    """
+
+    # Point 10
+    state_coverage_corpus_uk = pd.read_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv", index_col="terms")
+    state_coverage_corpus_state = pd.read_csv("elasticsearch/analyse/point9/state_coverage.csv", index_col="terms")
+    unique_location_uk = \
+        state_coverage_corpus_uk.loc[state_coverage_corpus_uk.index.drop_duplicates(keep=False)].groupby("state").count()
+    unique_location_state = \
+        state_coverage_corpus_state.loc[state_coverage_corpus_state.index.drop_duplicates(keep=False)].groupby("state").count()
+    #Normalize by number of terms (uk = 400, state = 800) and percentage
+    unique_location_uk_norm = unique_location_uk*100/len(state_coverage_corpus_uk.index)
+    unique_location_state_norm = unique_location_state * 100 / len(state_coverage_corpus_state.index)
+    # Plot
+    unique_location_uk_norm[["tf", "tf-idf","h-tfidf"]].plot.bar(
+        title="Percent of unique location of word retrieve by measure on corpus on whole UK for TF / TF-IDF")
+    unique_location_state_norm[["tf", "tf-idf","h-tfidf"]].plot.bar(
+        title = "Percent of unique location of word retrieve by measure on corpus by state for TF / TF-IDF")
+    plt.show()
+
+    # End of point 10
 
     print("end")
