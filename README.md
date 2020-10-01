@@ -79,5 +79,8 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     ![eval10_uniquelocation_corpus-state](readme_ressources/eval10_uniquelocation_corpus-state.png "percentage of unique location for words extracted")
     
     Few comments :
-    From matrix build in eval 8 and 9 (state coverage), we drop all duplicates, count word that have unique location and normalize on the length of extracted term by measure
-    **We see that H-TFIDF have more word with unique location that the others. It can then extract terms specific of a location**
+    From matrix build in eval 8 and 9 (state coverage), we drop all duplicates, count word that have unique location and normalize on the length of extracted term by measure.
+    
+    **We see that H-TFIDF have more word with unique location that the others. It can then extract terms specific of a location**. 
+    
+    H-TFIDF works better thant TF/TF-IDF for state with big amount of tweets (England) 
