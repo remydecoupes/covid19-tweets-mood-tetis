@@ -65,6 +65,8 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     ![eval9_venn_corpus-state](readme_ressources/eval9_venn_corpus-state.png "Venn wordcloud for corpus = state")
     ![eval9_barchart_corpus-state](readme_ressources/eval9_barchart_corpus-state.png "Barchart common or specific words by measure")
     ![eval9_statecoverage_corpus-state](readme_ressources/eval9_statecoverage_corpus-state.png "Barchart state coverage")
+    
     Few comments: When focus on state, TF and TF-IDF have better overlap with K first terms most frequent in state, except for England (which as much more tweets).
-    So what we can say is H-TFIDF work better than TF/ TF-IDF for both on small (show in eval 8) and big (eval 9) amount of tweets 
+    
+    **So what we can say is H-TFIDF work better than TF/ TF-IDF for both on small (show in eval 8) and big (eval 9) amount of tweets** 
 10. 
