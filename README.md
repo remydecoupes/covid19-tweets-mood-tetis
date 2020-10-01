@@ -73,3 +73,11 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     **So what we can say is H-TFIDF work better than TF/ TF-IDF for both on small (show in eval 8) and big (eval 9) amount of tweets** 
 10. Evalutate the power of discrimination of H-TFIDF on space
     For each measure, count the number of word which are retrieve for only one state to show that H-TFIDF can retrieve terms used only in one place
+    
+    Some results
+    ![eval10_uniquelocation_corpus-uk](readme_ressources/eval10_uniquelocation_corpus-uk.png "percentage of unique location for words extracted")
+    ![eval10_uniquelocation_corpus-state](readme_ressources/eval10_uniquelocation_corpus-state.png "percentage of unique location for words extracted")
+    
+    Few comments :
+    From matrix build in eval 8 and 9 (state coverage), we drop all duplicates, count word that have unique location and normalize on the length of extracted term by measure
+    **We see that H-TFIDF have more word with unique location that the others. It can then extract terms specific of a location**
