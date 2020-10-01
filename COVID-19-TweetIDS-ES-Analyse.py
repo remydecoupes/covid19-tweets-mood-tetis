@@ -1283,6 +1283,57 @@ if __name__ == '__main__':
             len(venn_corpus_state.get_words_by_id('110')) + len(venn_corpus_state.get_words_by_id('111')) +\
             len(venn_corpus_state.get_words_by_id('011'))
     # print("nb_of_words: "+str(words))
+    ## Barchart with k first occurence by step (as point 9)
+    k_first_terms = 200 # from each state get k first most frequent word
+    nb_of_extracted_terms_from_mesure = 100 # from each measure, take nb first terms extract
+    es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
+    state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
+    state_frequent_terms_by_measure = \
+        pd.DataFrame(columns=state_frequent_terms_by_measure_col,
+                     index=range(k_first_terms * len(es_tweets_results_filtred_aggstate.index)))
+    for i, state in enumerate(es_tweets_results_filtred_aggstate.index):
+        state_frequent_terms_by_measure["state"][i * k_first_terms:(i + 1) * k_first_terms] = state
+        state_frequent_terms_by_measure["terms"][i * k_first_terms:(i + 1) * k_first_terms] = \
+            es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms].index
+        state_frequent_terms_by_measure["occurence"][i * k_first_terms:(i + 1) * k_first_terms] = \
+            es_tweets_results_filtred_aggstate.loc[state].sort_values(ascending=False)[0:k_first_terms]
+        htfidf_state = htfidf[state].iloc[0:nb_of_extracted_terms_from_mesure]
+        htfidf_state.rename("terms", inplace=True)
+        htfidf_state = htfidf_state.to_frame().set_index("terms")
+        htfidf_state["value"] = htfidf_state.index
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "h-tfidf"] = \
+            state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state].join(
+            htfidf_state,
+            on="terms",
+            how='left',
+        )["value"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf"] = \
+            state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
+            tf_corpus_state[tf_corpus_state.state == state].iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms")["score"],
+            on="terms",
+            how='left'
+        )["score"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] =\
+            state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
+            tfidf_corpus_state[tfidf_corpus_state.state == state].iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms")["score"],
+            on="terms",
+            how='left'
+        )["score"]
+    ## save in CSV
+    state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/point9/state_coverage.csv")
+    ## build barchart
+    barchart_col = ["tf", "tf-idf", "h-tfidf"]
+    barchart = pd.DataFrame(columns=barchart_col, index=range(1))
+    barchart.tf = state_frequent_terms_by_measure.tf.count() / len(state_frequent_terms_by_measure) * 100
+    barchart["tf-idf"] = state_frequent_terms_by_measure["tf-idf"].count() / len(state_frequent_terms_by_measure) * 100
+    barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(state_frequent_terms_by_measure) * 100
+    barchart = barchart.transpose()
+    barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
+                      legend=False)
+    barchart_by_state = state_frequent_terms_by_measure.groupby(["state"]).count()
+    barchart_by_state[["tf", "tf-idf", "h-tfidf"]].plot.bar(
+        title="Percentage of top K first frequent terms presents in measure by state"
+    )
     plt.show()
     # end point 9
 
