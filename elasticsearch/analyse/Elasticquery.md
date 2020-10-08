@@ -6,7 +6,7 @@ You can easily export your visual filter from kibana to a query of elastic searc
 3. Click on request
 4. Copy paste the query to kibana dev tool or your curl or python script
 
-![Kibana](kibana_export_query_from_visual.png)
+![Kibana](img-markdown/kibana_export_query_from_visual.png)
 ## Get all tweets from United Kingdom 
 ### Kibana dev tools
 ```
