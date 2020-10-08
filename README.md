@@ -84,3 +84,4 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     **We see that H-TFIDF have more word with unique location that the others. It can then extract terms specific of a location**. 
     
     H-TFIDF works better thant TF/TF-IDF for state with big amount of tweets (England) 
+11. Retrieve tweets corresponding at best ranked terms extracted by H-TF-IDF 

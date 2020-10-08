@@ -900,6 +900,10 @@ def compute_occurence_word_by_state():
     es_tweets_results_filtred_aggstate = es_tweets_results_filtred.groupby("state").sum()
     return es_tweets_results_filtred_aggstate
 
+def get_tweets_by_terms(term):
+    list_of_tweets = []
+    tweets_by_term = {}
+    return tweets_by_term
 
 if __name__ == '__main__':
     print("begin")
@@ -1339,6 +1343,7 @@ if __name__ == '__main__':
     # end point 9
     """
 
+    """
     # Point 10
     state_coverage_corpus_uk = pd.read_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv", index_col="terms")
     state_coverage_corpus_state = pd.read_csv("elasticsearch/analyse/point9/state_coverage.csv", index_col="terms")
@@ -1355,7 +1360,10 @@ if __name__ == '__main__':
     unique_location_state_norm[["tf", "tf-idf","h-tfidf"]].plot.bar(
         title = "Percent of unique location of word retrieve by measure on corpus by state for TF / TF-IDF")
     plt.show()
-
     # End of point 10
+    """
+
+    # Point 11
+    # End of point 11
 
     print("end")
