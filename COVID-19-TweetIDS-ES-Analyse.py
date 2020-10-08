@@ -901,8 +901,124 @@ def compute_occurence_word_by_state():
     return es_tweets_results_filtred_aggstate
 
 def get_tweets_by_terms(term):
+    """
+    Return tweets content containing the term
+    :param term: term for retrieving tweets
+    :return: Dictionnary of tweets for the term
+    """
     list_of_tweets = []
     tweets_by_term = {}
+    client = Elasticsearch("http://localhost:9200")
+    index = "twitter"
+    # Define a Query : Here get only city from UK
+    query = {"query": {
+    "bool": {
+      "must": [],
+      "filter": [
+        {
+          "bool": {
+            "filter": [
+              {
+                "bool": {
+                  "should": [
+                    {
+                      "bool": {
+                        "should": [
+                          {
+                            "match_phrase": {
+                              "rest.features.properties.city.keyword": "London"
+                            }
+                          }
+                        ],
+                        "minimum_should_match": 1
+                      }
+                    },
+                    {
+                      "bool": {
+                        "should": [
+                          {
+                            "bool": {
+                              "should": [
+                                {
+                                  "match_phrase": {
+                                    "rest.features.properties.city.keyword": "Glasgow"
+                                  }
+                                }
+                              ],
+                              "minimum_should_match": 1
+                            }
+                          },
+                          {
+                            "bool": {
+                              "should": [
+                                {
+                                  "bool": {
+                                    "should": [
+                                      {
+                                        "match_phrase": {
+                                          "rest.features.properties.city.keyword": "Belfast"
+                                        }
+                                      }
+                                    ],
+                                    "minimum_should_match": 1
+                                  }
+                                },
+                                {
+                                  "bool": {
+                                    "should": [
+                                      {
+                                        "match": {
+                                          "rest.features.properties.city.keyword": "Cardiff"
+                                        }
+                                      }
+                                    ],
+                                    "minimum_should_match": 1
+                                  }
+                                }
+                              ],
+                              "minimum_should_match": 1
+                            }
+                          }
+                        ],
+                        "minimum_should_match": 1
+                      }
+                    }
+                  ],
+                  "minimum_should_match": 1
+                }
+              },
+              {
+                "bool": {
+                  "should": [
+                    {
+                      "match": {
+                        "full_text": term
+                      }
+                    }
+                  ],
+                  "minimum_should_match": 1
+                }
+              }
+            ]
+          }
+        },
+        {
+          "range": {
+            "created_at": {
+              "gte": "2020-01-22T23:00:00.000Z",
+              "lte": "2020-01-30T23:00:00.000Z",
+              "format": "strict_date_optional_time"
+            }
+          }
+        }
+      ],
+    }
+    }
+    }
+
+    result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
+    for hint in result:
+        print(result)
     return tweets_by_term
 
 if __name__ == '__main__':
@@ -1364,6 +1480,7 @@ if __name__ == '__main__':
     """
 
     # Point 11
+    get_tweets_by_terms("miami")
     # End of point 11
 
     print("end")
