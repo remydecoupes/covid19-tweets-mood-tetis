@@ -902,7 +902,7 @@ def compute_occurence_word_by_state():
 
 def get_tweets_by_terms(term):
     """
-    Return tweets content containing the term
+    Return tweets content containing the term for Eval 11
     Warning: Only work on
         - the spatial window : capital of UK
         - the temporal windows : 2020-01-22 to 30
@@ -913,7 +913,6 @@ def get_tweets_by_terms(term):
     :return: Dictionnary of tweets for the term
     """
     list_of_tweets = []
-    tweets_by_term = {}
     client = Elasticsearch("http://localhost:9200")
     index = "twitter"
     # Define a Query : Here get only city from UK
@@ -1036,8 +1035,7 @@ def get_tweets_by_terms(term):
             "state": state
         }
         list_of_tweets.append(tweet)
-    tweets_by_term[term] = list_of_tweets
-    return tweets_by_term
+    return list_of_tweets
 
 if __name__ == '__main__':
     print("begin")
@@ -1500,8 +1498,12 @@ if __name__ == '__main__':
     # Point 11
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     htfidf = htfidf.transpose()
-    term_tweets = get_tweets_by_terms("world")
-    print(term_tweets)
+    for state in htfidf.keys():
+        for term in htfidf[state]:
+            term_tweets = get_tweets_by_terms(term)
+            df = pd.DataFrame.from_dict(term_tweets)
+            print(df)
+    #print(term_tweets)
     # End of point 11
 
     print("end")
