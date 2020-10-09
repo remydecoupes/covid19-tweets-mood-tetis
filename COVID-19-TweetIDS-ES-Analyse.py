@@ -903,6 +903,12 @@ def compute_occurence_word_by_state():
 def get_tweets_by_terms(term):
     """
     Return tweets content containing the term
+    Warning: Only work on
+        - the spatial window : capital of UK
+        - the temporal windows : 2020-01-22 to 30
+    Todo:
+        - if you want to generelized this method at ohter spatial & temporal windows. You have to custom the
+        elastic serarch query.
     :param term: term for retrieving tweets
     :return: Dictionnary of tweets for the term
     """
@@ -1021,8 +1027,10 @@ def get_tweets_by_terms(term):
     except:
         print("Elasticsearch deamon may not be launchued")
         result = ""
-    for hint in result:
-        print(result)
+
+    for hit in result['hits']['hits']:
+        list_of_tweets.append(hit["_source"]["full_text"])
+    tweets_by_term[term] = list_of_tweets
     return tweets_by_term
 
 if __name__ == '__main__':
@@ -1484,7 +1492,8 @@ if __name__ == '__main__':
     """
 
     # Point 11
-    get_tweets_by_terms("miami")
+    term_tweets = get_tweets_by_terms("world")
+    print(term_tweets)
     # End of point 11
 
     print("end")
