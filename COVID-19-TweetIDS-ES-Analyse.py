@@ -1029,7 +1029,13 @@ def get_tweets_by_terms(term):
         result = ""
 
     for hit in result['hits']['hits']:
-        list_of_tweets.append(hit["_source"]["full_text"])
+        content = hit["_source"]["full_text"]
+        state = hit["_source"]["rest"]["features"][0]["properties"]["state"]
+        tweet = {
+            "full_text": content,
+            "state": state
+        }
+        list_of_tweets.append(tweet)
     tweets_by_term[term] = list_of_tweets
     return tweets_by_term
 
@@ -1492,6 +1498,8 @@ if __name__ == '__main__':
     """
 
     # Point 11
+    htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    htfidf = htfidf.transpose()
     term_tweets = get_tweets_by_terms("world")
     print(term_tweets)
     # End of point 11
