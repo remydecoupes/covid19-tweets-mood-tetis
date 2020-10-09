@@ -1016,7 +1016,11 @@ def get_tweets_by_terms(term):
     }
     }
 
-    result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
+    try:
+        result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
+    except:
+        print("Elasticsearch deamon may not be launchued")
+        result = ""
     for hint in result:
         print(result)
     return tweets_by_term
