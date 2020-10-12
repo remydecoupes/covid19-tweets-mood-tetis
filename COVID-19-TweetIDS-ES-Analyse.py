@@ -1023,7 +1023,7 @@ def get_tweets_by_terms(term):
     }
 
     try:
-        result = Elasticsearch.search(client, index=index, body=query)
+        result = Elasticsearch.search(client, index=index, body=query, size=10000)
     except Exception as e:
         print("Elasticsearch deamon may not be launched for term: "+term)
         print(e)
@@ -1507,15 +1507,15 @@ if __name__ == '__main__':
             try:
                 term_tweets = get_tweets_by_terms(term)
                 df = pd.DataFrame.from_dict(term_tweets)
-                list_of_nb_tweets.append(df.count())
+                list_of_nb_tweets.append(len(df["full_text"]))
                 list_of_nb_unique_sate.append(len(df.state.unique()))
             except:
                 print("error for this term: "+term)
                 list_of_nb_tweets.append(np.NAN)
                 list_of_nb_unique_sate.append(np.NAN)
-            #sleep(0.50)
-        print(list_of_nb_unique_sate)
-    #print(term_tweets)
+        htfidf[state+"_nb_tweets_with_this_term"] = list_of_nb_tweets
+        htfidf[state + "_nb_of_unique_state"] = list_of_nb_unique_sate
+        htfidf.to_csv("elasticsearch/analyse/eval11/htfidf_nb_tweets.csv")
     # End of point 11
 
     print("end")
