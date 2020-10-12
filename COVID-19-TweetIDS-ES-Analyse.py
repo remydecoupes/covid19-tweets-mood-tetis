@@ -1499,7 +1499,9 @@ if __name__ == '__main__':
 
     # Point 11
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    tfidf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
     htfidf = htfidf.transpose()
+    ## H-TF-IDF
     for state in htfidf.keys():
         list_of_nb_tweets = []
         list_of_nb_tweets_for_concering_state = []
@@ -1522,6 +1524,29 @@ if __name__ == '__main__':
         htfidf[state+"_nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
         htfidf[state + "_nb_of_unique_state"] = list_of_nb_unique_sate
         htfidf.to_csv("elasticsearch/analyse/eval11/htfidf_nb_tweets.csv")
+    # TF-IDF corpus state :
+    list_of_nb_tweets = []
+    list_of_nb_tweets_for_concering_state = []
+    list_of_nb_unique_sate = []
+    list_tfidf_estimated = []
+    for term in tfidf_corpus_state.terms:
+        try:
+            term_tweets = get_tweets_by_terms(term)
+            df = pd.DataFrame.from_dict(term_tweets)
+            list_of_nb_tweets.append(len(df["full_text"]))
+            list_of_nb_tweets_for_concering_state.append(
+                len(df[df["state"] == tfidf_corpus_state[tfidf_corpus_state["terms"] == term].iloc[0].state]))
+            list_of_nb_unique_sate.append(len(df.state.unique()))
+        except:
+            print("error for this term: "+term)
+            list_of_nb_tweets.append(np.NAN)
+            list_of_nb_unique_sate.append(np.NAN)
+            list_of_nb_tweets_for_concering_state.append(np.NAN)
+            list_tfidf_estimated.append(np.NAN)
+    tfidf_corpus_state["nb_tweets_with_this_term"] = list_of_nb_tweets
+    tfidf_corpus_state["nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
+    tfidf_corpus_state["nb_of_unique_state"] = list_of_nb_unique_sate
+    tfidf_corpus_state.to_csv("elasticsearch/analyse/eval11/tfidf_corpus_state_nb_tweets.csv")
     # End of point 11
 
     print("end")
