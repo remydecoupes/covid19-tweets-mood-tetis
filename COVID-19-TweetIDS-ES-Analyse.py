@@ -3,6 +3,7 @@
 """
 analyse Elasticsearch query
 """
+from time import sleep
 
 from elasticsearch import Elasticsearch
 from collections import defaultdict
@@ -1022,9 +1023,10 @@ def get_tweets_by_terms(term):
     }
 
     try:
-        result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
-    except:
-        print("Elasticsearch deamon may not be launchued")
+        result = Elasticsearch.search(client, index=index, body=query, scroll='1m')
+    except Exception as e:
+        print("Elasticsearch deamon may not be launched for term: "+term)
+        print(e)
         result = ""
 
     for hit in result['hits']['hits']:
@@ -1499,10 +1501,20 @@ if __name__ == '__main__':
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     htfidf = htfidf.transpose()
     for state in htfidf.keys():
-        for term in htfidf[state]:
-            term_tweets = get_tweets_by_terms(term)
-            df = pd.DataFrame.from_dict(term_tweets)
-            print(df)
+        list_of_nb_tweets = []
+        list_of_nb_unique_sate = []
+        for i, term in enumerate(htfidf[state]):
+            try:
+                term_tweets = get_tweets_by_terms(term)
+                df = pd.DataFrame.from_dict(term_tweets)
+                list_of_nb_tweets.append(df.count())
+                list_of_nb_unique_sate.append(len(df.state.unique()))
+            except:
+                print("error for this term: "+term)
+                list_of_nb_tweets.append(np.NAN)
+                list_of_nb_unique_sate.append(np.NAN)
+            sleep(0.50)
+        print(list_of_nb_unique_sate)
     #print(term_tweets)
     # End of point 11
 
