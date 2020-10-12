@@ -1502,18 +1502,24 @@ if __name__ == '__main__':
     htfidf = htfidf.transpose()
     for state in htfidf.keys():
         list_of_nb_tweets = []
+        list_of_nb_tweets_for_concering_state = []
         list_of_nb_unique_sate = []
+        list_tfidf_estimated = []
         for i, term in enumerate(htfidf[state]):
             try:
                 term_tweets = get_tweets_by_terms(term)
                 df = pd.DataFrame.from_dict(term_tweets)
                 list_of_nb_tweets.append(len(df["full_text"]))
+                list_of_nb_tweets_for_concering_state.append(len(df[df["state"] == state]))
                 list_of_nb_unique_sate.append(len(df.state.unique()))
             except:
                 print("error for this term: "+term)
                 list_of_nb_tweets.append(np.NAN)
                 list_of_nb_unique_sate.append(np.NAN)
+                list_of_nb_tweets_for_concering_state.append(np.NAN)
+                list_tfidf_estimated.append(np.NAN)
         htfidf[state+"_nb_tweets_with_this_term"] = list_of_nb_tweets
+        htfidf[state+"_nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
         htfidf[state + "_nb_of_unique_state"] = list_of_nb_unique_sate
         htfidf.to_csv("elasticsearch/analyse/eval11/htfidf_nb_tweets.csv")
     # End of point 11
