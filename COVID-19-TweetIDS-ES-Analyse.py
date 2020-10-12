@@ -1023,7 +1023,7 @@ def get_tweets_by_terms(term):
     }
 
     try:
-        result = Elasticsearch.search(client, index=index, body=query, scroll='1m')
+        result = Elasticsearch.search(client, index=index, body=query)
     except Exception as e:
         print("Elasticsearch deamon may not be launched for term: "+term)
         print(e)
@@ -1513,7 +1513,7 @@ if __name__ == '__main__':
                 print("error for this term: "+term)
                 list_of_nb_tweets.append(np.NAN)
                 list_of_nb_unique_sate.append(np.NAN)
-            sleep(0.50)
+            #sleep(0.50)
         print(list_of_nb_unique_sate)
     #print(term_tweets)
     # End of point 11
