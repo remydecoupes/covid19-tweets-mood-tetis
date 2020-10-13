@@ -85,7 +85,8 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     
     H-TFIDF works better thant TF/TF-IDF for state with big amount of tweets (England) 
 11. Retrieve tweets corresponding at best ranked terms extracted by H-TF-IDF 
-    What we want to evaluate is : Is H-TF-IDF retrieve terms from tweets from the specific state ? i.e. : if the world "w" is extracted by H-TF-IDF for state "s", is the w in also other state ?
+    
+    a. What we want to evaluate is : Is H-TF-IDF retrieve terms from tweets from the specific state ? i.e. : if the world "w" is extracted by H-TF-IDF for state "s", is the w in also other state ?
     To achieve that, we query elastic search to get all tweets (and their location) containing terms extracted from H-TF-IDF and TF-IDF (corpus = state). Then compute the ratio of Sum of count of tweet with state associated with the term extracted / sum of count of all Tweet.
     
     Some results :
@@ -95,4 +96,17 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     Few comments:
     These figures doesn't show the discriminance power because of terms very frequent that are common used in England. For example  the term "worried" best H-TF-IDF of Nothern Ireland is in lot of tweets from England as well.
     This over frequently term affect to much theses barchart.
+    
+    b. Compute the mean of nb of states for each term 
+    
+    For each state, compute the mean of number of states that a tweet containing terms of measure have been sent.
+    
+    some results:
+    ![eval11b_htfidf](readme_ressources/eval11b_mean_nb-states_htfidf.png)
+    ![eval11b_tfidf](readme_ressources/eval11b_mean_nb-states_tfidf.png)
+    
+    Few comments:
+    
+    Tweet containing terms extracted from H-TF-IDF are from less different states thant TF-IDF that show H-TF-IDF have a better space discriminance.  
+    
     

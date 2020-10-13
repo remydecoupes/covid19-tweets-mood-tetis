@@ -1553,19 +1553,29 @@ if __name__ == '__main__':
     htfidf_barchart = \
         pd.DataFrame(columns=states, index=["ratio nb of specific tweets from state / all states"])
     htfidf_barchart_dict = {}
+    htfidf_mean_barchart = \
+        pd.DataFrame(columns=states, index=["Mean of states"])
+    htfidf_mean_barchart_dict = {}
     for state in states:
         htfidf_barchart_dict[state] = \
             htfidf[state+"_nb_tweets_for_this_state"].sum() / htfidf[state+"_nb_tweets_with_this_term"].sum() *100
+        htfidf_mean_barchart_dict[state] = htfidf[state+"_nb_of_unique_state"].mean()
     htfidf_barchart.iloc[0] = htfidf_barchart_dict
+    htfidf_mean_barchart.iloc[0] = htfidf_mean_barchart_dict
     ### TF-IDF
     tfidf_grouped = tfidf_corpus_state.groupby("state")
     tfidf_barchart = \
         pd.DataFrame(columns=tfidf_grouped.groups.keys(), index=["ratio nb of specific tweets from state / all states"])
     tfidf_barchart_dict = {}
+    tfidf_mean_barchart = \
+        pd.DataFrame(columns=tfidf_grouped.groups.keys(), index=["Mean of states"])
+    tfidf_mean_barchart_dict = {}
     for state, group in tfidf_grouped:
         tfidf_barchart_dict[state] = \
             group["nb_tweets_for_this_state"].sum() / group["nb_tweets_with_this_term"].sum()*100
+        tfidf_mean_barchart_dict[state] = group["nb_of_unique_state"].mean()
     tfidf_barchart.iloc[0] = tfidf_barchart_dict
+    tfidf_mean_barchart.iloc[0] = tfidf_mean_barchart_dict
 
     ### Plot bar chart
     htfidf_barchart.plot.bar(
@@ -1578,6 +1588,16 @@ if __name__ == '__main__':
     ax1 = plt.axes()
     x_axis = ax1.axes.get_xaxis()
     x_axis.set_visible(False)
+    htfidf_mean_barchart.plot.bar(
+        title="H-TF-IDF : Mean of number of states of tweets retrieved by query with H-TF-IDF extracted terms"
+    )
+    plt.axes().axes.get_xaxis().set_visible(False)
+    plt.ylim(0, 4)
+    tfidf_mean_barchart.plot.bar(
+        title="TF-IDF : Mean of number of states of tweets retrieved by query with TF-IDF extracted terms"
+    )
+    plt.axes().axes.get_xaxis().set_visible(False)
+    plt.ylim(0, 4)
     plt.show()
     # End of point 11
 
