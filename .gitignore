@@ -45,6 +45,7 @@ elasticsearch/analyse/*.ods
 elasticsearch/analyse/TFClassical/*
 elasticsearch/analyse/state_coverage/*
 elasticsearch/analyse/point9/*
+elasticsearch/analyse/eval11/*
 
 
 
