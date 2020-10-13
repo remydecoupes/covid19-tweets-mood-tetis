@@ -101,12 +101,13 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     
     For each state, compute the mean of number of states that a tweet containing terms of measure have been sent.
     
-    some results:
+    Some results:
     ![eval11b_htfidf](readme_ressources/eval11b_mean_nb-states_htfidf.png)
     ![eval11b_tfidf](readme_ressources/eval11b_mean_nb-states_tfidf.png)
     
     Few comments:
     
-    Tweet containing terms extracted from H-TF-IDF are from less different states thant TF-IDF that show H-TF-IDF have a better space discriminance.  
+    Tweet containing terms extracted from H-TF-IDF are from less different states that TF-IDF (exept for England) that show H-TF-IDF have a better space discriminance.  
     
+    What we can also say is H-TF-IDF could be very effective when we compare different area with large disparities int the number of tweets (For example : England with Nothern Ireland). This could be very usefull for analyse European countries.
     
