@@ -1547,6 +1547,38 @@ if __name__ == '__main__':
     tfidf_corpus_state["nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
     tfidf_corpus_state["nb_of_unique_state"] = list_of_nb_unique_sate
     tfidf_corpus_state.to_csv("elasticsearch/analyse/eval11/tfidf_corpus_state_nb_tweets.csv")
+    ## Barchart Sum of tweet for specific state / all tweet
+    ###
+    states = ('England', 'Northern Ireland', 'Scotland', 'Wales')
+    htfidf_barchart = \
+        pd.DataFrame(columns=states, index=["ratio nb of specific tweets from state / all states"])
+    htfidf_barchart_dict = {}
+    for state in states:
+        htfidf_barchart_dict[state] = \
+            htfidf[state+"_nb_tweets_for_this_state"].sum() / htfidf[state+"_nb_tweets_with_this_term"].sum() *100
+    htfidf_barchart.iloc[0] = htfidf_barchart_dict
+    ### TF-IDF
+    tfidf_grouped = tfidf_corpus_state.groupby("state")
+    tfidf_barchart = \
+        pd.DataFrame(columns=tfidf_grouped.groups.keys(), index=["ratio nb of specific tweets from state / all states"])
+    tfidf_barchart_dict = {}
+    for state, group in tfidf_grouped:
+        tfidf_barchart_dict[state] = \
+            group["nb_tweets_for_this_state"].sum() / group["nb_tweets_with_this_term"].sum()*100
+    tfidf_barchart.iloc[0] = tfidf_barchart_dict
+
+    ### Plot bar chart
+    htfidf_barchart.plot.bar(
+        title="H-TF-IDF Ratio of number of tweets containing terms extracted in specific state / all states")
+    ax1 = plt.axes()
+    x_axis = ax1.axes.get_xaxis()
+    x_axis.set_visible(False)
+    tfidf_barchart.plot.bar(
+        title="TF-IDF Ratio of number of tweets containing terms extracted in specific state / all states")
+    ax1 = plt.axes()
+    x_axis = ax1.axes.get_xaxis()
+    x_axis.set_visible(False)
+    plt.show()
     # End of point 11
 
     print("end")
