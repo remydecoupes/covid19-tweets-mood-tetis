@@ -111,3 +111,4 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     
     What we can also say is H-TF-IDF could be very effective when we compare different area with large disparities int the number of tweets (For example : England with Nothern Ireland). This could be very usefull for analyse European countries.
     
+12. Create a choropleth maps on count of tweets by UK states

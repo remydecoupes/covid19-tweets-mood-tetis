@@ -23,6 +23,7 @@ import pyLDAvis.gensim
 from termcolor import colored
 # end LDA
 import pandas as pd
+import geopandas
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from nltk.corpus import wordnet
 # SPARQL
@@ -32,7 +33,6 @@ from tqdm import tqdm
 # ploting
 import matplotlib.pyplot as plt
 from matplotlib_venn_wordcloud import venn3_wordcloud
-
 # multiprocessing
 
 # Global var on Levels on spatial and temporal axis
@@ -709,8 +709,8 @@ def sparqlquery(thesaurus, term):
     try:
         result = sparql.query(endpoint, q, timeout=30)
         # Sometimes Endpoint can bug on a request.
-            # SparqlException raised by sparql-client if timeout is reach
-            # other exception (That I have not identify yet) when endpoint send non well formated answer
+        # SparqlException raised by sparql-client if timeout is reach
+        # other exception (That I have not identify yet) when endpoint send non well formated answer
     except:
         result = "endpoint error"
     return result
@@ -762,6 +762,7 @@ def meshCoverage(pdterms):
             pdterms.at[index, 'mesh'] = True
     print("Mesh number of error: " + str(endpointerror))
     return pdterms
+
 
 def TFIDF_TF_with_corpus_state():
     """
@@ -832,7 +833,7 @@ def TFIDF_TF_with_corpus_state():
         for term in TFIDFClassical.keys():
             if term in stopwords.words('english'):
                 del TFIDFClassical[term]
-        #TFIDFClassical.to_csv("elasticsearch/analyse/point9/tfidf.csv")
+        # TFIDFClassical.to_csv("elasticsearch/analyse/point9/tfidf.csv")
         ## Extract N TOP ranking score
         top_n = 500
         extractBiggest = TFIDFClassical.stack().nlargest(top_n)
@@ -868,9 +869,10 @@ def TFIDF_TF_with_corpus_state():
         extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
         extractBiggestTF["state"] = state
         extractBiggestTF_allstates = extractBiggestTF_allstates.append(extractBiggestTF, ignore_index=True)
-    
+
     extractBiggestTF_allstates.to_csv("elasticsearch/analyse/point9/TF_BiggestScore.csv")
     extractBiggestTFIDF_allstates.to_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
+
 
 def compute_occurence_word_by_state():
     """
@@ -891,6 +893,7 @@ def compute_occurence_word_by_state():
     es_tweets_results = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
     es_tweets_results_filtred = spatiotemporelFilter(es_tweets_results, listOfcities=listOfCity, spatialLevel='state',
                                                      period=tfidfPeriod)
+
     ## Aggregate by state
     ### Create 4 new columns : city, State, Country and date
     def splitindex(row):
@@ -900,6 +903,7 @@ def compute_occurence_word_by_state():
     es_tweets_results_filtred["date"] = zip(*es_tweets_results_filtred.index.map(splitindex))
     es_tweets_results_filtred_aggstate = es_tweets_results_filtred.groupby("state").sum()
     return es_tweets_results_filtred_aggstate
+
 
 def get_tweets_by_terms(term):
     """
@@ -918,114 +922,114 @@ def get_tweets_by_terms(term):
     index = "twitter"
     # Define a Query : Here get only city from UK
     query = {"query": {
-    "bool": {
-      "must": [],
-      "filter": [
-        {
-          "bool": {
+        "bool": {
+            "must": [],
             "filter": [
-              {
-                "bool": {
-                  "should": [
-                    {
-                      "bool": {
-                        "should": [
-                          {
-                            "match_phrase": {
-                              "rest.features.properties.city.keyword": "London"
-                            }
-                          }
-                        ],
-                        "minimum_should_match": 1
-                      }
-                    },
-                    {
-                      "bool": {
-                        "should": [
-                          {
-                            "bool": {
-                              "should": [
-                                {
-                                  "match_phrase": {
-                                    "rest.features.properties.city.keyword": "Glasgow"
-                                  }
-                                }
-                              ],
-                              "minimum_should_match": 1
-                            }
-                          },
-                          {
-                            "bool": {
-                              "should": [
-                                {
-                                  "bool": {
+                {
+                    "bool": {
+                        "filter": [
+                            {
+                                "bool": {
                                     "should": [
-                                      {
-                                        "match_phrase": {
-                                          "rest.features.properties.city.keyword": "Belfast"
+                                        {
+                                            "bool": {
+                                                "should": [
+                                                    {
+                                                        "match_phrase": {
+                                                            "rest.features.properties.city.keyword": "London"
+                                                        }
+                                                    }
+                                                ],
+                                                "minimum_should_match": 1
+                                            }
+                                        },
+                                        {
+                                            "bool": {
+                                                "should": [
+                                                    {
+                                                        "bool": {
+                                                            "should": [
+                                                                {
+                                                                    "match_phrase": {
+                                                                        "rest.features.properties.city.keyword": "Glasgow"
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "minimum_should_match": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "bool": {
+                                                            "should": [
+                                                                {
+                                                                    "bool": {
+                                                                        "should": [
+                                                                            {
+                                                                                "match_phrase": {
+                                                                                    "rest.features.properties.city.keyword": "Belfast"
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "minimum_should_match": 1
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "bool": {
+                                                                        "should": [
+                                                                            {
+                                                                                "match": {
+                                                                                    "rest.features.properties.city.keyword": "Cardiff"
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "minimum_should_match": 1
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "minimum_should_match": 1
+                                                        }
+                                                    }
+                                                ],
+                                                "minimum_should_match": 1
+                                            }
                                         }
-                                      }
                                     ],
                                     "minimum_should_match": 1
-                                  }
-                                },
-                                {
-                                  "bool": {
+                                }
+                            },
+                            {
+                                "bool": {
                                     "should": [
-                                      {
-                                        "match": {
-                                          "rest.features.properties.city.keyword": "Cardiff"
+                                        {
+                                            "match": {
+                                                "full_text": term
+                                            }
                                         }
-                                      }
                                     ],
                                     "minimum_should_match": 1
-                                  }
                                 }
-                              ],
-                              "minimum_should_match": 1
                             }
-                          }
-                        ],
-                        "minimum_should_match": 1
-                      }
+                        ]
                     }
-                  ],
-                  "minimum_should_match": 1
-                }
-              },
-              {
-                "bool": {
-                  "should": [
-                    {
-                      "match": {
-                        "full_text": term
-                      }
+                },
+                {
+                    "range": {
+                        "created_at": {
+                            "gte": "2020-01-22T23:00:00.000Z",
+                            "lte": "2020-01-30T23:00:00.000Z",
+                            "format": "strict_date_optional_time"
+                        }
                     }
-                  ],
-                  "minimum_should_match": 1
                 }
-              }
-            ]
-          }
-        },
-        {
-          "range": {
-            "created_at": {
-              "gte": "2020-01-22T23:00:00.000Z",
-              "lte": "2020-01-30T23:00:00.000Z",
-              "format": "strict_date_optional_time"
-            }
-          }
+            ],
         }
-      ],
-    }
     }
     }
 
     try:
         result = Elasticsearch.search(client, index=index, body=query, size=10000)
     except Exception as e:
-        print("Elasticsearch deamon may not be launched for term: "+term)
+        print("Elasticsearch deamon may not be launched for term: " + term)
         print(e)
         result = ""
 
@@ -1038,6 +1042,137 @@ def get_tweets_by_terms(term):
         }
         list_of_tweets.append(tweet)
     return list_of_tweets
+
+
+def get_nb_of_tweets_with_spatio_temporal_filter():
+    """
+    Return tweets content containing the term for Eval 11
+    Warning: Only work on
+        - the spatial window : capital of UK
+        - the temporal windows : 2020-01-22 to 30
+    Todo:
+        - if you want to generelized this method at ohter spatial & temporal windows. You have to custom the
+        elastic serarch query.
+    :param term: term for retrieving tweets
+    :return: Dictionnary of nb of tweets by state
+    """
+    list_of_tweets = []
+    client = Elasticsearch("http://localhost:9200")
+    index = "twitter"
+    # Define a Query : Here get only city from UK
+    query = {"query": {
+        "bool": {
+            "must": [],
+            "filter": [
+                {
+                    "bool": {
+                        "filter": [
+                            {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "bool": {
+                                                "should": [
+                                                    {
+                                                        "match_phrase": {
+                                                            "rest.features.properties.city.keyword": "London"
+                                                        }
+                                                    }
+                                                ],
+                                                "minimum_should_match": 1
+                                            }
+                                        },
+                                        {
+                                            "bool": {
+                                                "should": [
+                                                    {
+                                                        "bool": {
+                                                            "should": [
+                                                                {
+                                                                    "match_phrase": {
+                                                                        "rest.features.properties.city.keyword": "Glasgow"
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "minimum_should_match": 1
+                                                        }
+                                                    },
+                                                    {
+                                                        "bool": {
+                                                            "should": [
+                                                                {
+                                                                    "bool": {
+                                                                        "should": [
+                                                                            {
+                                                                                "match_phrase": {
+                                                                                    "rest.features.properties.city.keyword": "Belfast"
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "minimum_should_match": 1
+                                                                    }
+                                                                },
+                                                                {
+                                                                    "bool": {
+                                                                        "should": [
+                                                                            {
+                                                                                "match": {
+                                                                                    "rest.features.properties.city.keyword": "Cardiff"
+                                                                                }
+                                                                            }
+                                                                        ],
+                                                                        "minimum_should_match": 1
+                                                                    }
+                                                                }
+                                                            ],
+                                                            "minimum_should_match": 1
+                                                        }
+                                                    }
+                                                ],
+                                                "minimum_should_match": 1
+                                            }
+                                        }
+                                    ],
+                                    "minimum_should_match": 1
+                                }
+                            },
+                        ]
+                    }
+                },
+                {
+                    "range": {
+                        "created_at": {
+                            "gte": "2020-01-22T23:00:00.000Z",
+                            "lte": "2020-01-30T23:00:00.000Z",
+                            "format": "strict_date_optional_time"
+                        }
+                    }
+                }
+            ],
+        }
+    }
+    }
+
+    try:
+        result = Elasticsearch.search(client, index=index, body=query, size=10000)
+    except Exception as e:
+        print("Elasticsearch deamon may not be launched")
+        print(e)
+        result = ""
+
+    nb_tweets_by_state = pd.DataFrame(index=["nb_tweets"], columns=('England', 'Northern Ireland', 'Scotland', 'Wales'))
+    nb_tweets_by_state.iloc[0] = (0, 0, 0, 0)
+    list_of_unboundaries_state = []
+    for hit in result['hits']['hits']:
+        try:
+            state = hit["_source"]["rest"]["features"][0]["properties"]["state"]
+            nb_tweets_by_state[state].iloc[0] += 1
+        except:
+            state_no_uk = str(hit["_source"]["rest"]["features"][0]["properties"]["city"] + " " + state)
+            list_of_unboundaries_state.append(state_no_uk)
+    print("get_nb_of_tweets_with_spatio_temporal_filter(): List of unique location outside of UK: "+str(set(list_of_unboundaries_state)))
+    return nb_tweets_by_state
+
 
 if __name__ == '__main__':
     print("begin")
@@ -1498,6 +1633,7 @@ if __name__ == '__main__':
     """
 
     # Point 11
+    """
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     tfidf_corpus_state = pd.read_csv("elasticsearch/analyse/point9/TFIDF_BiggestScore.csv")
     htfidf = htfidf.transpose()
@@ -1599,6 +1735,15 @@ if __name__ == '__main__':
     plt.axes().axes.get_xaxis().set_visible(False)
     plt.ylim(0, 4)
     plt.show()
+    """
     # End of point 11
 
+    # Point eval12 : Choropleth Maps
+    states = ('England', 'Northern Ireland', 'Scotland', 'Wales')
+    tweets_by_state_df = get_nb_of_tweets_with_spatio_temporal_filter()
+    tweets_by_state_df = tweets_by_state_df.transpose()
+    print(tweets_by_state_df)
+    uk_states_boundaries = geopandas.read_file("elasticsearch/analyse/eval12/uk_state_boundaries/gadm36_GBR_1.shp")
+
+    # End of point eval12
     print("end")
