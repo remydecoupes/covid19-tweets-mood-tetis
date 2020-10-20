@@ -1738,12 +1738,26 @@ if __name__ == '__main__':
     """
     # End of point 11
 
-    # Point eval12 : Choropleth Maps
+    # Point eval12 : Choropleth Maps : https://geopandas.org/mapping.html#choropleth-maps
     states = ('England', 'Northern Ireland', 'Scotland', 'Wales')
     tweets_by_state_df = get_nb_of_tweets_with_spatio_temporal_filter()
     tweets_by_state_df = tweets_by_state_df.transpose()
     print(tweets_by_state_df)
     uk_states_boundaries = geopandas.read_file("elasticsearch/analyse/eval12/uk_state_boundaries/gadm36_GBR_1.shp")
-
+    ## Merge tweets_by_state with shapefile to get geometry
+    tweets_by_state_df_geo = uk_states_boundaries.merge(tweets_by_state_df,
+                                                        left_on="NAME_1",
+                                                        right_index=True)[['geometry', 'nb_tweets', 'NAME_1']]
+    ## Merge lost data type of column nb_tweets
+    tweets_by_state_df_geo.nb_tweets = tweets_by_state_df_geo.nb_tweets.astype(int)
+    tweets_by_state_df_geo.plot(column="nb_tweets", legend=True, cmap='OrRd')
+    ## Display for each state on map : the number of tweet
+    ### To do so, we hate to convert geometry to xy coordonnates from the figure)
+    tweets_by_state_df_geo['coords'] = \
+        tweets_by_state_df_geo['geometry'].apply(lambda x: x.representative_point().coords[:])
+    tweets_by_state_df_geo['coords'] = [coords[0] for coords in tweets_by_state_df_geo['coords']]
+    for i, row in tweets_by_state_df_geo.iterrows():
+        plt.annotate(s=row["nb_tweets"], xy=row["coords"])
+    plt.show()
     # End of point eval12
     print("end")
