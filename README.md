@@ -50,7 +50,7 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     The aim is to compute % of overlapping between the K most frequent words using by state (i.e : concat all tweets by state) **with** N terms extracted by TF / TF-IDF / H-TF-IDF.
     TF and TF-IDF have been parameterized with Doc = 1 tweet and Corpus = UK.
     
-    ![eval 8](readme_ressources/barchcart_bystate.png "Evaluation of point 8")
+    ![eval 8](readme_ressources/eval8_update_nb-top-term.png "Evaluation of point 8")
     
     H-TF-IDF works better than TF/TFIDF in general and in particular with small amount of tweets (Nothern Ireland)
 9. Evaluation with different TF / TF-IDF settings : work on corpus and document 

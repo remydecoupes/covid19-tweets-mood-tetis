@@ -1408,8 +1408,7 @@ if __name__ == '__main__':
     """
 
     # Point 7 : count  the number of TF / TF-IDF / H-TFIDF terms for each states
-    """
-    nb_of_extracted_terms_from_mesure = 100
+    nb_of_extracted_terms_from_mesure = 300
     ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
     es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
 
@@ -1435,12 +1434,11 @@ if __name__ == '__main__':
     for state in es_tweets_results_filtred_aggstate.index:
         df = htfidf.loc[state].to_frame().set_index(state).join(es_tweets_results_filtred_aggstate.loc[state], how="left")
         df.to_csv("elasticsearch/analyse/state_coverage/htfidf_"+state+".csv")
-
     # end Point 7
 
     # Point 8 : Get K frequent terms for each state's tweets and see percentage coverage with the 3 measures
-    k_first_terms = 100 # from each state get k first most frequent word
-    nb_of_extracted_terms_from_mesure = 100 # from each measure, take nb first terms extract
+    k_first_terms = 300 # from each state get k first most frequent word
+    nb_of_extracted_terms_from_mesure = 300 # from each measure, take nb first terms extract
     es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
     state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
     state_frequent_terms_by_measure = \
@@ -1477,21 +1475,32 @@ if __name__ == '__main__':
     ## save in CSV
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
     ## build barchart
+    nb_of_k_first_terms_by_state = [100, 200, 300]
     barchart_col = ["tf", "tf-idf", "h-tfidf"]
-    barchart = pd.DataFrame(columns=barchart_col, index=range(1))
-    barchart.tf = state_frequent_terms_by_measure.tf.count() / len(state_frequent_terms_by_measure) * 100
-    barchart["tf-idf"] = state_frequent_terms_by_measure["tf-idf"].count() / len(state_frequent_terms_by_measure) * 100
-    barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(state_frequent_terms_by_measure) * 100
-    barchart = barchart.transpose()
-    barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
-                      legend=False)
-    barchart_by_state = state_frequent_terms_by_measure.groupby(["state"]).count()
-    barchart_by_state[["tf", "tf-idf", "h-tfidf"]].plot.bar(
-        title="Percentage of top K first frequent terms presents in measure by state"
-    )
+    for nb in nb_of_k_first_terms_by_state:
+        state_frequent_terms_by_measure_resize = \
+            pd.DataFrame(columns=state_frequent_terms_by_measure.keys())
+        for state in state_frequent_terms_by_measure.state.unique():
+            state_frequent_terms_by_measure_resize = state_frequent_terms_by_measure_resize.append(
+                state_frequent_terms_by_measure[state_frequent_terms_by_measure["state"] == state].iloc[0:nb],
+                ignore_index=True,
+            )
+        barchart = pd.DataFrame(columns=barchart_col, index=range(1))
+        barchart.tf = state_frequent_terms_by_measure_resize.tf.count() / len(state_frequent_terms_by_measure_resize) * 100
+        barchart["tf-idf"] = state_frequent_terms_by_measure_resize["tf-idf"].count() / len(state_frequent_terms_by_measure_resize) * 100
+        barchart["h-tfidf"] = state_frequent_terms_by_measure_resize["h-tfidf"].count() / len(state_frequent_terms_by_measure_resize) * 100
+        barchart = barchart.transpose()
+        # barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
+        #                   legend=False)
+        barchart_by_state = state_frequent_terms_by_measure_resize.groupby(["state"]).count()
+        barchart_by_state = barchart_by_state.apply(lambda x: 100 * x / nb)
+        barchart_by_state[["tf", "tf-idf", "h-tfidf"]].plot.bar(
+            title="Percentage of top "+str(nb)+" first frequent terms presents in measure by state",
+            ylim=(0, 100)
+        )
     plt.show()
     # end point 8
-    """
+
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
     """
@@ -1739,6 +1748,7 @@ if __name__ == '__main__':
     # End of point 11
 
     # Point eval12 : Choropleth Maps : https://geopandas.org/mapping.html#choropleth-maps
+    """
     states = ('England', 'Northern Ireland', 'Scotland', 'Wales')
     tweets_by_state_df = get_nb_of_tweets_with_spatio_temporal_filter()
     tweets_by_state_df = tweets_by_state_df.transpose()
@@ -1759,5 +1769,6 @@ if __name__ == '__main__':
     for i, row in tweets_by_state_df_geo.iterrows():
         plt.annotate(s=row["nb_tweets"], xy=row["coords"])
     plt.show()
+    """
     # End of point eval12
     print("end")
