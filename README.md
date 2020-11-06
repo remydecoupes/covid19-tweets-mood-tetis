@@ -114,3 +114,4 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
 12. Create a choropleth maps on count of tweets by UK states
 
     ![eval12](readme_ressources/eval12_maps-Uh_with-Nb-Tweets.png)
+13. Bert Summarize tweets containing terms from the TOP100 H-TF-IDF

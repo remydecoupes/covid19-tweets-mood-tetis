@@ -34,6 +34,8 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib_venn_wordcloud import venn3_wordcloud
 # multiprocessing
+# BERT
+from transformers import pipeline
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -1408,6 +1410,7 @@ if __name__ == '__main__':
     """
 
     # Point 7 : count  the number of TF / TF-IDF / H-TFIDF terms for each states
+    """
     nb_of_extracted_terms_from_mesure = 300
     ## Compute a table : (row : state; column: occurence of each terms present in state's tweets)
     es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
@@ -1503,7 +1506,7 @@ if __name__ == '__main__':
 
 
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
-    """
+    
     ## Compute TF / TF-IDF by state
     # TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
     ## open CSV Files
@@ -1771,4 +1774,25 @@ if __name__ == '__main__':
     plt.show()
     """
     # End of point eval12
+    # Eval 13 : Bert summerization : https://huggingface.co/transformers/task_summary.html
+    ## Pipelin huggingface transformers :
+    summarizer = pipeline("summarization")
+    htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
+    htfidf = htfidf.transpose()
+    ## H-TF-IDF
+    for state in htfidf.keys():
+        list_of_tweets = []
+        document = ""
+        for i, term in enumerate(htfidf[state].iloc[10]):
+            try:
+                term_tweets = get_tweets_by_terms(term)
+                df = pd.DataFrame.from_dict(term_tweets)
+                list_of_tweets.append(df["full_text"].values.tolist()[0])
+            except:
+                print("error for this term: "+term)
+                list_of_tweets.append(np.NAN)
+        # print(list_of_tweets)
+        document = '. '.join(list_of_tweets)
+        print(summarizer(document, max_length=130, min_length=30, do_sample=False))
+    # end eval 13
     print("end")
