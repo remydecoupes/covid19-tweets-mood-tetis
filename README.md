@@ -34,7 +34,7 @@ Tweets have to be download (i.e. hydrated) from Echen repository. See steps belo
     * Install a plugin for logstash to geocode user location (plugin is for using API Rest):
         `sudo /usr/share/logstash/bin/logstash-plugin install logstash-filter-rest`
 2. Start indexing in elastic with logstash :
-    * sudo /usr/share/logstash/bin/logstash -f elasticsearch/logstash-config/json.conf
+    * `sudo /usr/share/logstash/bin/logstash -f elasticsearch/logstash-config/json.conf`
     * /!\ Be carefull if you try to index with a laptop using Wifi, it may power off wlan interface even if you desable sleep mode. If you are using a debian/ubuntu OS, you'll need to disable power management on your wlan interface. =>
     `sudo iwconfig wlo1 power off` (non permanent on reboot)
 3. Import into kibana : dashbord from this repository
