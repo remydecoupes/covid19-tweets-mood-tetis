@@ -39,14 +39,12 @@ def nbOfTweetsPerDay(day, tweetsIdFiles):
                 num_lines_day += num_lines
     return num_lines_day
 
-def plotTweetsFromEchen():
+def plotTweetsFromEchen(startDate, enDate):
     """
 
     :return:
     """
     listOfTweetsPerDay = defaultdict()
-    startDate = date(2020, 1, 22)
-    enDate = date(2020, 2, 11)
     tweetsDir = Path('echen102_COVID19-TweetIDs/COVID-19-TweetIDs')
     for single_date in daterange(startDate, enDate):
         listOfTweetsPerDay[single_date.strftime("%Y-%m-%d")] = nbOfTweetsPerDay(single_date, tweetsDir)
@@ -87,14 +85,12 @@ def nbOfTweetsAndRTPerDay(day, hydrateDir):
                             num_tweets +=1
     return [day, num_tweets, num_rt]
 
-def plotTweetsAndRT():
+def plotTweetsAndRT(startDate, enDate):
     """
 
     :return:
     """
     listOfTweetsPerDay = defaultdict()
-    startDate = date(2020, 1, 22)
-    enDate = date(2020, 2, 13)
     tweetsHydrateDir = Path('hydrating-and-extracting')
     df = pd.DataFrame(columns=('date', 'tweets', 'retweets'))
     i = 0
@@ -110,8 +106,8 @@ def plotTweetsAndRT():
     # ax = df.plot(kind='bar', x='date', y='tweets', color="C2",
     #              title='Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3')
     # df.plot(kind='bar', x='date', y='retweets', ax=ax)
-    figure_title = 'Number of tweets and retweets from Echen102/COVID-19-TweetIDs per day on period 3'
-    axsub = df.plot(kind='bar',
+    figure_title = 'Number of tweets and retweets per day'
+    axsub = df.plot.bar(stacked=True,
             x='date',
             y=['tweets', 'retweets'],
             title=figure_title,
@@ -186,14 +182,14 @@ def tweetLocationExtract(geoJsonfile):
 if __name__ == '__main__':
     print("begin")
     listOfTweetsPerDay = defaultdict()
-    startDate = date(2020, 1, 22)
-    enDate = date(2020, 2, 13)
+    startDate = date(2020, 1, 19)
+    enDate = date(2020, 2, 15)
 
     ## Count nb of tweets from github echen
-    # plotTweetsFromEchen()
+    # plotTweetsFromEchen(startDate, enDate)
 
     ## Count nb of tweets and retweet from hydrating and extracting
-    plotTweetsAndRT()
+    plotTweetsAndRT(startDate, enDate)
 
     ## Stat on location
     geoJsonfile = 'COVID19_echen_geo_data.json'
