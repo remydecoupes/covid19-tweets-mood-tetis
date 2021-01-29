@@ -205,7 +205,7 @@ def preprocessTerms(document):
     return doc
 
 
-def matrixOccurenceBuilder(tweetsofcity):
+def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout):
     """
     Create a matrix of :
         - line : (city,day)
@@ -215,6 +215,7 @@ def matrixOccurenceBuilder(tweetsofcity):
     http://www.xavierdupre.fr/app/papierstat/helpsphinx/notebooks/artificiel_tokenize_features.html
     https://towardsdatascience.com/natural-language-processing-feature-engineering-using-tf-idf-e8b9d00e7e76
     :param tweetsofcity:
+    :param f_out: file to save
     :return:
     """
     # initiate matrix of tweets aggregate by day
@@ -244,7 +245,7 @@ def matrixOccurenceBuilder(tweetsofcity):
             }
             cityDayList.append(city + "_" + str(day))
             matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
-    matrixAggDay.to_csv("elasticsearch/analyse/matrixAggDay.csv")
+    matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
     cd = CountVectorizer()
@@ -264,7 +265,7 @@ def matrixOccurenceBuilder(tweetsofcity):
             del matrixOccurence[term]
 
     # save to file
-    matrixOccurence.to_csv("elasticsearch/analyse/matrixOccurence.csv")
+    matrixOccurence.to_csv(matrixOccurence_fout)
     return matrixOccurence
 
 
@@ -1183,8 +1184,11 @@ if __name__ == '__main__':
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
     query = open(query_fname, "r").read()
     tweetsByCityAndDate = elasticsearchQuery(query_fname)
+    print("End ES query")
     # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
+    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
+    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixOccurence"
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
 
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it

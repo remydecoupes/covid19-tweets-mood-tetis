@@ -50,6 +50,7 @@ elasticsearch/analyse/eval12/*
 
 # NLDB21
 dataset-analyse
+elasticsearch/analyse/nldb21/
 
 
 
