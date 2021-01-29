@@ -48,6 +48,9 @@ elasticsearch/analyse/point9/*
 elasticsearch/analyse/eval11/*
 elasticsearch/analyse/eval12/*
 
+# NLDB21
+dataset-analyse
+
 
 
 # libreoffice swp

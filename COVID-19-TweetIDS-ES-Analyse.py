@@ -42,7 +42,7 @@ spatialLevels = ['city', 'state', 'country']
 temporalLevels = ['day', 'week', 'month', 'period']
 
 
-def elasticsearchQuery():
+def elasticsearchQuery(query_fname):
     """
     Build a ES query  and return a default dict with resuls
     :return: tweetsByCityAndDate
@@ -51,8 +51,7 @@ def elasticsearchQuery():
     client = Elasticsearch("http://localhost:9200")
     index = "twitter"
     # Define a Query : Here get only city from UK
-    query = {"query": {"bool": {"must": [{"match": {"rest_user_osm.country.keyword": "United Kingdom"}},
-                                         {"range": {"created_at": {"gte": "Wed Jan 22 00:00:01 +0000 2020"}}}]}}}
+    query = open(query_fname, "r").read()
     result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
 
     # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
@@ -1178,23 +1177,27 @@ def get_nb_of_tweets_with_spatio_temporal_filter():
 
 if __name__ == '__main__':
     print("begin")
-    """
+
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
-    tweetsByCityAndDate = elasticsearchQuery()
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
+    query = open(query_fname, "r").read()
+    tweetsByCityAndDate = elasticsearchQuery(query_fname)
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate)
-    """
+
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
     """
     # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
     """
     ### Filter city and period
+    """
     listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    """
 
     """
     ## Compute TF-IDF
@@ -1218,8 +1221,10 @@ if __name__ == '__main__':
     compareWithHTFIDF(200, biotex, repToSave)
     """
     # declare path for comparison H-TFIDF with TF-IDF and TF (scikit measures)
+    """
     tfidfpath = "elasticsearch/analyse/TFIDFClassical/TFIDFclassicalBiggestScore.csv"
     tfpath = "elasticsearch/analyse/TFClassical/TFclassicalBiggestScore.csv"
+    """
 
     """
     #Compare classical TF-IDF with H-TFIDF
@@ -1258,10 +1263,12 @@ if __name__ == '__main__':
     """
 
     ## Percent of Coverage : print
+    """
     tfidf = pd.read_csv(tfidfpath)
     tf = pd.read_csv(tfpath)
     htfidfStackedPAth = "elasticsearch/analyse/h-tfidf-stacked-wordnet.csv"
     htfidf = pd.read_csv(htfidfStackedPAth)
+    """
     """
     ### Limit to a maximun numbers of terms
     nfirstterms = 50
@@ -1775,6 +1782,7 @@ if __name__ == '__main__':
     """
     # End of point eval12
     # Eval 13 : Bert summerization : https://huggingface.co/transformers/task_summary.html
+    """
     ## Pipelin huggingface transformers :
     summarizer = pipeline("summarization")
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
@@ -1795,4 +1803,5 @@ if __name__ == '__main__':
         document = '. '.join(list_of_tweets)
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
+    """
     print("end")
