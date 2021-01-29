@@ -46,7 +46,7 @@ spatialLevels = ['city', 'state', 'country']
 temporalLevels = ['day', 'week', 'month', 'period']
 
 
-def elasticsearchQuery(query_fname):
+def elasticsearchQuery(query_fname, logger):
     """
     Build a ES query  and return a default dict with resuls
     :return: tweetsByCityAndDate
@@ -54,12 +54,12 @@ def elasticsearchQuery(query_fname):
     # Elastic search credentials
     client = Elasticsearch("http://localhost:9200")
     index = "twitter"
-    # Define a Query : Here get only city from UK
+    # Define a Query
     query = open(query_fname, "r").read()
     result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
 
     # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
-    results = avoid10kquerylimitation(result, client)
+    results = avoid10kquerylimitation(result, client, logger)
 
     # Initiate a dict for each city append all Tweets content
     tweetsByCityAndDate = defaultdict(list)
@@ -84,7 +84,7 @@ def elasticsearchQuery(query_fname):
     return tweetsByCityAndDate
 
 
-def avoid10kquerylimitation(result, client):
+def avoid10kquerylimitation(result, client, logger):
     """
     Elasticsearch limit results of query at 10 000. To avoid this limit, we need to paginate results and scroll
     This method append all pages form scroll search
@@ -92,15 +92,22 @@ def avoid10kquerylimitation(result, client):
     :return:
     """
     scroll_size = result['hits']['total']["value"]
+    logger.info("Number of elasticsearch scroll: "+str(scroll_size))
     results = []
+    # Progress bar
+    pbar = tqdm(total=scroll_size)
     while (scroll_size > 0):
         try:
             scroll_id = result['_scroll_id']
             res = client.scroll(scroll_id=scroll_id, scroll='60s')
             results += res['hits']['hits']
             scroll_size = len(res['hits']['hits'])
+            pbar.update(scroll_size)
         except:
+            pbar.close()
+            logger.error("elasticsearch search scroll failed")
             break
+    pbar.close()
     return results
 
 
@@ -1189,7 +1196,8 @@ def logsetup(log_fname):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
-    file_handler = RotatingFileHandler(log_fname, 'a', 1000000, 1)
+    now = datetime.now()
+    file_handler = RotatingFileHandler(log_fname+"_"+now.strftime("%Y-%m-%d_%H-%M-%S")+".log", 'a', 1000000, 1)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -1824,7 +1832,7 @@ def ECIR20():
 
 if __name__ == '__main__':
     # initialize a logger :
-    log_fname = "elasticsearch/analyse/nldb21/logs/nldb21.log"
+    log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
@@ -1833,7 +1841,7 @@ if __name__ == '__main__':
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
-    tweetsByCityAndDate = elasticsearchQuery(query_fname)
+    tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
     logger.info("elasticsearch : stop quering")
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
