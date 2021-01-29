@@ -36,6 +36,10 @@ from matplotlib_venn_wordcloud import venn3_wordcloud
 # multiprocessing
 # BERT
 from transformers import pipeline
+# LOG
+import logging
+from logging.handlers import RotatingFileHandler
+
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -1175,20 +1179,45 @@ def get_nb_of_tweets_with_spatio_temporal_filter():
     print("get_nb_of_tweets_with_spatio_temporal_filter(): List of unique location outside of UK: "+str(set(list_of_unboundaries_state)))
     return nb_tweets_by_state
 
+def logsetup():
+    """
+    Initiate a logger object :
+        - Log in file : collectweets.log
+        - also print on screen
+    :return: logger object
+    """
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+    file_handler = RotatingFileHandler('log/collectweets.log', 'a', 1000000, 1)
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+    stream_handler = logging.StreamHandler()
+    # Only display on screen INFO
+    stream_handler.setLevel(logging.INFO)
+    logger.addHandler(stream_handler)
+    return logger
+
 
 if __name__ == '__main__':
-    print("begin")
+    # initialize a logger :
+    logger = logsetup()
+    logger.info("H-TFIDF expirements starts")
 
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
     query = open(query_fname, "r").read()
+    logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname)
-    print("End ES query")
+    logger.info("elasticsearch : stop quering")
     # Build a matrix of occurence for each terms in document aggregate by city and day
     matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
     matrixOccurence_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixOccurence"
+    logger.info("Build matrix of occurence : start")
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
+    logger.info("Build matrix of occurence : stop")
 
     # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
