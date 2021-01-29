@@ -1187,7 +1187,7 @@ def logsetup(log_fname):
     :return: logger object
     """
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
     file_handler = RotatingFileHandler(log_fname, 'a', 1000000, 1)
     file_handler.setLevel(logging.DEBUG)
@@ -1825,7 +1825,7 @@ def ECIR20():
 if __name__ == '__main__':
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21.log"
-    logger = logsetup()
+    logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
     # Comment below if you don't want to rebuild matrixOccurence
@@ -1859,3 +1859,4 @@ if __name__ == '__main__':
     ## Compute TF-IDF
     TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
     """
+    logger.info("H-TFIDF expirements stops")
