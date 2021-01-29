@@ -6,6 +6,7 @@ analyse Elasticsearch query
 from time import sleep
 
 from elasticsearch import Elasticsearch
+from elasticsearch import logger as es_logger
 from collections import defaultdict
 import re
 from pathlib import Path
@@ -53,6 +54,7 @@ def elasticsearchQuery(query_fname, logger):
     """
     # Elastic search credentials
     client = Elasticsearch("http://localhost:9200")
+    es_logger.setLevel(logging.WARNING)
     index = "twitter"
     # Define a Query
     query = open(query_fname, "r").read()
@@ -364,7 +366,7 @@ def biotexAdaptativeBuilderAdaptative(listOfcities='all', spatialLevel='city', p
     f.close()
 
 
-def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
     """
     Aggregate on spatial and temporel and then compute TF-IDF
 
@@ -417,17 +419,17 @@ def TFIDFAdaptative(matrixOcc, listOfcities='all', spatialLevel='city', period='
     matrixTFIDF.dropna(axis=1, how='all', inplace=True)
 
     # Save file
-    matrixTFIDF.to_csv("elasticsearch/analyse/matrixTFIDFadaptative.csv")
+    matrixTFIDF.to_csv(matrixHTFIDF_fname)
 
     # Export N biggest TF-IDF score:
     top_n = 500
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0, top_n))
     for row in matrixTFIDF.index:
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
-    extractBiggest.to_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv")
+    extractBiggest.to_csv(biggestHTFIDFscore_fname)
 
 
-def ldHTFIDFadaptative(listOfcities):
+def ldHHTFIDF(listOfcities):
     """ /!\ for testing only !!!!
     Only work if nb of states = nb of cities
     i.e for UK working on 4 states with their capitals...
@@ -1218,7 +1220,7 @@ def ECIR20():
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
     # LDA clustering on TF-IDF adaptative vocabulary
     listOfCityState = ['London_England', 'Glasgow_Scotland', 'Belfast_Northern Ireland', 'Cardiff_Wales']
-    ldHTFIDFadaptative(listOfCityState)
+    ldHHTFIDF(listOfCityState)
     """
 
     """
@@ -1844,8 +1846,8 @@ if __name__ == '__main__':
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
     logger.info("elasticsearch : stop quering")
     # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
-    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixOccurence"
+    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay"
+    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence"
     logger.info("Build matrix of occurence : start")
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
     logger.info("Build matrix of occurence : stop")
@@ -1863,8 +1865,9 @@ if __name__ == '__main__':
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
     """
 
-    """
     ## Compute TF-IDF
-    TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
-    """
+    matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
+    biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
+    #HTFIDF(matrixOcc=matrixOccurence, spatialLevel='country', period=tfidfPeriod)
+
     logger.info("H-TFIDF expirements stops")
