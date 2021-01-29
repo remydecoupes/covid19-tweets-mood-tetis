@@ -1179,7 +1179,7 @@ def get_nb_of_tweets_with_spatio_temporal_filter():
     print("get_nb_of_tweets_with_spatio_temporal_filter(): List of unique location outside of UK: "+str(set(list_of_unboundaries_state)))
     return nb_tweets_by_state
 
-def logsetup():
+def logsetup(log_fname):
     """
     Initiate a logger object :
         - Log in file : collectweets.log
@@ -1189,7 +1189,7 @@ def logsetup():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
-    file_handler = RotatingFileHandler('log/collectweets.log', 'a', 1000000, 1)
+    file_handler = RotatingFileHandler(log_fname, 'a', 1000000, 1)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -1824,6 +1824,7 @@ def ECIR20():
 
 if __name__ == '__main__':
     # initialize a logger :
+    log_fname = "elasticsearch/analyse/nldb21/logs/nldb21.log"
     logger = logsetup()
     logger.info("H-TFIDF expirements starts")
 
