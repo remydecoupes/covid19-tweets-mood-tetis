@@ -1199,29 +1199,7 @@ def logsetup():
     logger.addHandler(stream_handler)
     return logger
 
-
-if __name__ == '__main__':
-    # initialize a logger :
-    logger = logsetup()
-    logger.info("H-TFIDF expirements starts")
-
-    # Comment below if you don't want to rebuild matrixOccurence
-    # Query Elastic Search : From now only on UK (see functions var below)
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
-    query = open(query_fname, "r").read()
-    logger.info("elasticsearch : start quering")
-    tweetsByCityAndDate = elasticsearchQuery(query_fname)
-    logger.info("elasticsearch : stop quering")
-    # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
-    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixOccurence"
-    logger.info("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
-    logger.info("Build matrix of occurence : stop")
-
-    # TF-IDF adaptative
-    ## import matrixOccurence if you don't want to re-build it
-    """
+def ECIR20():
     # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
     """
     ### Filter city and period
@@ -1230,12 +1208,6 @@ if __name__ == '__main__':
     tfidfStartDate = date(2020, 1, 23)
     tfidfEndDate = date(2020, 1, 30)
     tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    """
-
-    """
-    ## Compute TF-IDF
-    TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
-
     # LDA clustering on TF-IDF adaptative vocabulary
     listOfCityState = ['London_England', 'Glasgow_Scotland', 'Belfast_Northern Ireland', 'Cardiff_Wales']
     ldHTFIDFadaptative(listOfCityState)
@@ -1260,7 +1232,7 @@ if __name__ == '__main__':
     """
 
     """
-    #Compare classical TF-IDF with H-TFIDF
+    # Compare classical TF-IDF with H-TFIDF
     ## HTFIDF_comparewith_TFIDF_TF() gives commun and spectific terms between H-TFIDF and TF-ISF & TF classics
     HTFIDF_comparewith_TFIDF_TF()
     """
@@ -1322,14 +1294,14 @@ if __name__ == '__main__':
     """
 
     """
-    #Point 6 Comment thesaurus coverage
-    
+    # Point 6 Comment thesaurus coverage
+
     ## plot graph coverage depending nb first elements
     ### Retrieve the mimimun len (i.e. nb of terms extracted) for the three measure :
     min_len = min(tfidf.shape[0], tf.shape[0], htfidf.shape[0])
 
     ### Building dataframes containing percent of thesaurus coverage to plot
-    nbfirstelementsRange = range(1,min_len)
+    nbfirstelementsRange = range(1, min_len)
     col = ['h-tfidf', 'tf-idf', 'tf', 'Number_of_the_first_terms_extracted']
     wordnetCoverageByNbofterms = pd.DataFrame(columns=col)
     agrovocCoverageByBbofterms = pd.DataFrame(columns=col)
@@ -1368,27 +1340,30 @@ if __name__ == '__main__':
         title='Wordnet'
     )
     axes[0].xaxis.set_visible(False)
-    wordnetCoverageByNbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[0])
+    wordnetCoverageByNbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line',
+                                    ax=axes[0])
     axes[1].set(
         xlabel='Number of the first n elements',
         ylabel='Percentage of terms in Agrovoc',
         title='Agrovoc'
     )
     axes[1].xaxis.set_visible(False)
-    agrovocCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[1])
+    agrovocCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line',
+                                    ax=axes[1])
     axes[2].set(
         xlabel='Number of the first n elements',
         ylabel='Percentage of terms in MeSH',
         title='MeSH'
     )
-    #axes[2].xaxis.set_visible(False)
-    meshCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line', ax=axes[2])
+    # axes[2].xaxis.set_visible(False)
+    meshCoverageByBbofterms.plot(x='Number_of_the_first_terms_extracted', y=['h-tfidf', 'tf-idf', 'tf'], kind='line',
+                                 ax=axes[2])
     # As we hide xlabel for each subplots, we want to share one xlabel below the figure
     # fig.text(0.32, 0.04, "Number of the first n elements")
     fig.suptitle("Percentage of terms in Wordnet / Agrovoc / MesH \nby measures H-TFIDF / TF-IDF / TF")
     fig.set_size_inches(8, 15)
-    #plt.show()
-    #fig.savefig("elasticsearch/analyse/thesaurus_coverage.png")
+    # plt.show()
+    # fig.savefig("elasticsearch/analyse/thesaurus_coverage.png")
 
     ## Venn diagram & wordcloud
     ## /!\ I have to modify source of matplotlib_venn_wordcloud/_main.py to have a good layout ...
@@ -1437,15 +1412,15 @@ if __name__ == '__main__':
     tf_venn = venn3_wordcloud(sets,
                               set_labels=['wordnet', '  agrovoc', '             mesh'],
                               wordcloud_kwargs=dict(min_font_size=4),
-                              #wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
-                              #set_colors=['r', 'g', 'b'],
-                              #alpha=0.8,
+                              # wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
+                              # set_colors=['r', 'g', 'b'],
+                              # alpha=0.8,
                               ax=axvenn[2])
     for label in tf_venn.set_labels:
         label.set_fontsize(15)
 
     plt.show()
-    
+
     # End of thesaurus coverage
     """
 
@@ -1475,13 +1450,14 @@ if __name__ == '__main__':
     ### H-TFIDF
     htfidf = pd.read_csv("elasticsearch/analyse/TFIDFadaptativeBiggestScore.csv", index_col=0)
     for state in es_tweets_results_filtred_aggstate.index:
-        df = htfidf.loc[state].to_frame().set_index(state).join(es_tweets_results_filtred_aggstate.loc[state], how="left")
-        df.to_csv("elasticsearch/analyse/state_coverage/htfidf_"+state+".csv")
+        df = htfidf.loc[state].to_frame().set_index(state).join(es_tweets_results_filtred_aggstate.loc[state],
+                                                                how="left")
+        df.to_csv("elasticsearch/analyse/state_coverage/htfidf_" + state + ".csv")
     # end Point 7
 
     # Point 8 : Get K frequent terms for each state's tweets and see percentage coverage with the 3 measures
-    k_first_terms = 300 # from each state get k first most frequent word
-    nb_of_extracted_terms_from_mesure = 300 # from each measure, take nb first terms extract
+    k_first_terms = 300  # from each state get k first most frequent word
+    nb_of_extracted_terms_from_mesure = 300  # from each measure, take nb first terms extract
     es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
     state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
     state_frequent_terms_by_measure = \
@@ -1499,22 +1475,22 @@ if __name__ == '__main__':
         htfidf_state["value"] = htfidf_state.index
         state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "h-tfidf"] = \
             state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state].join(
-            htfidf_state,
-            on="terms",
-            how='left',
-        )["value"]
+                htfidf_state,
+                on="terms",
+                how='left',
+            )["value"]
         state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf"] = \
             state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
-            tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-            on="terms",
-            how='left'
-        )["score"]
-        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] =\
+                tf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+                on="terms",
+                how='left'
+            )["score"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] = \
             state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
-            tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
-            on="terms",
-            how='left'
-        )["score"]
+                tfidf.iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms"),
+                on="terms",
+                how='left'
+            )["score"]
     ## save in CSV
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv")
     ## build barchart
@@ -1529,24 +1505,26 @@ if __name__ == '__main__':
                 ignore_index=True,
             )
         barchart = pd.DataFrame(columns=barchart_col, index=range(1))
-        barchart.tf = state_frequent_terms_by_measure_resize.tf.count() / len(state_frequent_terms_by_measure_resize) * 100
-        barchart["tf-idf"] = state_frequent_terms_by_measure_resize["tf-idf"].count() / len(state_frequent_terms_by_measure_resize) * 100
-        barchart["h-tfidf"] = state_frequent_terms_by_measure_resize["h-tfidf"].count() / len(state_frequent_terms_by_measure_resize) * 100
+        barchart.tf = state_frequent_terms_by_measure_resize.tf.count() / len(
+            state_frequent_terms_by_measure_resize) * 100
+        barchart["tf-idf"] = state_frequent_terms_by_measure_resize["tf-idf"].count() / len(
+            state_frequent_terms_by_measure_resize) * 100
+        barchart["h-tfidf"] = state_frequent_terms_by_measure_resize["h-tfidf"].count() / len(
+            state_frequent_terms_by_measure_resize) * 100
         barchart = barchart.transpose()
         # barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
         #                   legend=False)
         barchart_by_state = state_frequent_terms_by_measure_resize.groupby(["state"]).count()
         barchart_by_state = barchart_by_state.apply(lambda x: 100 * x / nb)
         barchart_by_state[["tf", "tf-idf", "h-tfidf"]].plot.bar(
-            title="Percentage of top "+str(nb)+" first frequent terms presents in measure by state",
+            title="Percentage of top " + str(nb) + " first frequent terms presents in measure by state",
             ylim=(0, 100)
         )
     plt.show()
     # end point 8
 
-
     # Point 9 : evaluation with TF / TF-IDF 1 doc = 1 tweet & Corpus = state
-    
+
     ## Compute TF / TF-IDF by state
     # TFIDF_TF_with_corpus_state() #don't forget to launch elastic search service !!!
     ## open CSV Files
@@ -1563,12 +1541,13 @@ if __name__ == '__main__':
     ### Subslicing : to 400 terms
     nb_of_terms_by_states = 25
     htfidf_slice = htfidf[0:nb_of_terms_by_states]
-    #tf_corpus_state_slice = tf_corpus_state[0:nb_of_terms_by_states]
-    #tfidf_corpus_state_slice = tfidf_corpus_state[0:nb_of_terms_by_states]
-    set_venn = pd.DataFrame(columns=["htfidf", "tfidf", "tf"], index=range(4*nb_of_terms_by_states))
+    # tf_corpus_state_slice = tf_corpus_state[0:nb_of_terms_by_states]
+    # tfidf_corpus_state_slice = tfidf_corpus_state[0:nb_of_terms_by_states]
+    set_venn = pd.DataFrame(columns=["htfidf", "tfidf", "tf"], index=range(4 * nb_of_terms_by_states))
     listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
     for i, state in enumerate(listOfState):
-        set_venn.loc[i*nb_of_terms_by_states:(i+1)*nb_of_terms_by_states-1, "htfidf"] = htfidf_slice[state].values
+        set_venn.loc[i * nb_of_terms_by_states:(i + 1) * nb_of_terms_by_states - 1, "htfidf"] = htfidf_slice[
+            state].values
         set_venn.loc[i * nb_of_terms_by_states:(i + 1) * nb_of_terms_by_states - 1, "tfidf"] = \
             tfidf_corpus_state[tfidf_corpus_state.state == state]["terms"].values[0:nb_of_terms_by_states]
         set_venn.loc[i * nb_of_terms_by_states:(i + 1) * nb_of_terms_by_states - 1, "tf"] = \
@@ -1577,12 +1556,12 @@ if __name__ == '__main__':
     for k in set_venn.keys():
         ven_set.append(set(set_venn[k].values))
     venn_corpus_state = venn3_wordcloud(ven_set,
-                              set_labels=['h-tf-idf', 'tf-idf','tf'],
-                              #wordcloud_kwargs=dict(min_font_size=4),
-                              #wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
-                              #set_colors=['r', 'g', 'b'],
-                              #alpha=0.8,
-                              #ax=axvenn[2]
+                                        set_labels=['h-tf-idf', 'tf-idf', 'tf'],
+                                        # wordcloud_kwargs=dict(min_font_size=4),
+                                        # wordcloud_kwargs=dict(max_font_size=10, min_font_size=10),
+                                        # set_colors=['r', 'g', 'b'],
+                                        # alpha=0.8,
+                                        # ax=axvenn[2]
                                         )
     for label in venn_corpus_state.set_labels:
         label.set_fontsize(15)
@@ -1606,12 +1585,12 @@ if __name__ == '__main__':
     barchart.plot.bar(title="Number of specific word by measures",
                       legend=False)
     words = len(tf_unique) + len(tfidf_unique) + len(htfidf_unique) + len(venn_corpus_state.get_words_by_id('101')) + \
-            len(venn_corpus_state.get_words_by_id('110')) + len(venn_corpus_state.get_words_by_id('111')) +\
+            len(venn_corpus_state.get_words_by_id('110')) + len(venn_corpus_state.get_words_by_id('111')) + \
             len(venn_corpus_state.get_words_by_id('011'))
     # print("nb_of_words: "+str(words))
     ## Barchart with k first occurence by step (as point 9)
-    k_first_terms = 200 # from each state get k first most frequent word
-    nb_of_extracted_terms_from_mesure = 100 # from each measure, take nb first terms extract
+    k_first_terms = 200  # from each state get k first most frequent word
+    nb_of_extracted_terms_from_mesure = 100  # from each measure, take nb first terms extract
     es_tweets_results_filtred_aggstate = compute_occurence_word_by_state()
     state_frequent_terms_by_measure_col = ["state", "terms", "occurence", "tf", "tf-idf", "h-tfidf"]
     state_frequent_terms_by_measure = \
@@ -1629,22 +1608,24 @@ if __name__ == '__main__':
         htfidf_state["value"] = htfidf_state.index
         state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "h-tfidf"] = \
             state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state].join(
-            htfidf_state,
-            on="terms",
-            how='left',
-        )["value"]
+                htfidf_state,
+                on="terms",
+                how='left',
+            )["value"]
         state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf"] = \
             state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
-            tf_corpus_state[tf_corpus_state.state == state].iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms")["score"],
-            on="terms",
-            how='left'
-        )["score"]
-        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] =\
+                tf_corpus_state[tf_corpus_state.state == state].iloc[0:nb_of_extracted_terms_from_mesure].set_index(
+                    "terms")["score"],
+                on="terms",
+                how='left'
+            )["score"]
+        state_frequent_terms_by_measure.loc[state_frequent_terms_by_measure.state == state, "tf-idf"] = \
             state_frequent_terms_by_measure[state_frequent_terms_by_measure.state == state].join(
-            tfidf_corpus_state[tfidf_corpus_state.state == state].iloc[0:nb_of_extracted_terms_from_mesure].set_index("terms")["score"],
-            on="terms",
-            how='left'
-        )["score"]
+                tfidf_corpus_state[tfidf_corpus_state.state == state].iloc[
+                0:nb_of_extracted_terms_from_mesure].set_index("terms")["score"],
+                on="terms",
+                how='left'
+            )["score"]
     ## save in CSV
     state_frequent_terms_by_measure.to_csv("elasticsearch/analyse/point9/state_coverage.csv")
     ## build barchart
@@ -1652,7 +1633,8 @@ if __name__ == '__main__':
     barchart = pd.DataFrame(columns=barchart_col, index=range(1))
     barchart.tf = state_frequent_terms_by_measure.tf.count() / len(state_frequent_terms_by_measure) * 100
     barchart["tf-idf"] = state_frequent_terms_by_measure["tf-idf"].count() / len(state_frequent_terms_by_measure) * 100
-    barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(state_frequent_terms_by_measure) * 100
+    barchart["h-tfidf"] = state_frequent_terms_by_measure["h-tfidf"].count() / len(
+        state_frequent_terms_by_measure) * 100
     barchart = barchart.transpose()
     barchart.plot.bar(title="Percentage of top K first frequent terms presents in measure",
                       legend=False)
@@ -1669,17 +1651,19 @@ if __name__ == '__main__':
     state_coverage_corpus_uk = pd.read_csv("elasticsearch/analyse/state_coverage/eval_point_8.csv", index_col="terms")
     state_coverage_corpus_state = pd.read_csv("elasticsearch/analyse/point9/state_coverage.csv", index_col="terms")
     unique_location_uk = \
-        state_coverage_corpus_uk.loc[state_coverage_corpus_uk.index.drop_duplicates(keep=False)].groupby("state").count()
+        state_coverage_corpus_uk.loc[state_coverage_corpus_uk.index.drop_duplicates(keep=False)].groupby(
+            "state").count()
     unique_location_state = \
-        state_coverage_corpus_state.loc[state_coverage_corpus_state.index.drop_duplicates(keep=False)].groupby("state").count()
-    #Normalize by number of terms (uk = 400, state = 800) and percentage
-    unique_location_uk_norm = unique_location_uk*100/len(state_coverage_corpus_uk.index)
+        state_coverage_corpus_state.loc[state_coverage_corpus_state.index.drop_duplicates(keep=False)].groupby(
+            "state").count()
+    # Normalize by number of terms (uk = 400, state = 800) and percentage
+    unique_location_uk_norm = unique_location_uk * 100 / len(state_coverage_corpus_uk.index)
     unique_location_state_norm = unique_location_state * 100 / len(state_coverage_corpus_state.index)
     # Plot
-    unique_location_uk_norm[["tf", "tf-idf","h-tfidf"]].plot.bar(
+    unique_location_uk_norm[["tf", "tf-idf", "h-tfidf"]].plot.bar(
         title="Percent of unique location of word retrieve by measure on corpus on whole UK for TF / TF-IDF")
-    unique_location_state_norm[["tf", "tf-idf","h-tfidf"]].plot.bar(
-        title = "Percent of unique location of word retrieve by measure on corpus by state for TF / TF-IDF")
+    unique_location_state_norm[["tf", "tf-idf", "h-tfidf"]].plot.bar(
+        title="Percent of unique location of word retrieve by measure on corpus by state for TF / TF-IDF")
     plt.show()
     # End of point 10
     """
@@ -1703,13 +1687,13 @@ if __name__ == '__main__':
                 list_of_nb_tweets_for_concering_state.append(len(df[df["state"] == state]))
                 list_of_nb_unique_sate.append(len(df.state.unique()))
             except:
-                print("error for this term: "+term)
+                print("error for this term: " + term)
                 list_of_nb_tweets.append(np.NAN)
                 list_of_nb_unique_sate.append(np.NAN)
                 list_of_nb_tweets_for_concering_state.append(np.NAN)
                 list_tfidf_estimated.append(np.NAN)
-        htfidf[state+"_nb_tweets_with_this_term"] = list_of_nb_tweets
-        htfidf[state+"_nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
+        htfidf[state + "_nb_tweets_with_this_term"] = list_of_nb_tweets
+        htfidf[state + "_nb_tweets_for_this_state"] = list_of_nb_tweets_for_concering_state
         htfidf[state + "_nb_of_unique_state"] = list_of_nb_unique_sate
         htfidf.to_csv("elasticsearch/analyse/eval11/htfidf_nb_tweets.csv")
     # TF-IDF corpus state :
@@ -1726,7 +1710,7 @@ if __name__ == '__main__':
                 len(df[df["state"] == tfidf_corpus_state[tfidf_corpus_state["terms"] == term].iloc[0].state]))
             list_of_nb_unique_sate.append(len(df.state.unique()))
         except:
-            print("error for this term: "+term)
+            print("error for this term: " + term)
             list_of_nb_tweets.append(np.NAN)
             list_of_nb_unique_sate.append(np.NAN)
             list_of_nb_tweets_for_concering_state.append(np.NAN)
@@ -1746,8 +1730,8 @@ if __name__ == '__main__':
     htfidf_mean_barchart_dict = {}
     for state in states:
         htfidf_barchart_dict[state] = \
-            htfidf[state+"_nb_tweets_for_this_state"].sum() / htfidf[state+"_nb_tweets_with_this_term"].sum() *100
-        htfidf_mean_barchart_dict[state] = htfidf[state+"_nb_of_unique_state"].mean()
+            htfidf[state + "_nb_tweets_for_this_state"].sum() / htfidf[state + "_nb_tweets_with_this_term"].sum() * 100
+        htfidf_mean_barchart_dict[state] = htfidf[state + "_nb_of_unique_state"].mean()
     htfidf_barchart.iloc[0] = htfidf_barchart_dict
     htfidf_mean_barchart.iloc[0] = htfidf_mean_barchart_dict
     ### TF-IDF
@@ -1760,7 +1744,7 @@ if __name__ == '__main__':
     tfidf_mean_barchart_dict = {}
     for state, group in tfidf_grouped:
         tfidf_barchart_dict[state] = \
-            group["nb_tweets_for_this_state"].sum() / group["nb_tweets_with_this_term"].sum()*100
+            group["nb_tweets_for_this_state"].sum() / group["nb_tweets_with_this_term"].sum() * 100
         tfidf_mean_barchart_dict[state] = group["nb_of_unique_state"].mean()
     tfidf_barchart.iloc[0] = tfidf_barchart_dict
     tfidf_mean_barchart.iloc[0] = tfidf_mean_barchart_dict
@@ -1830,11 +1814,47 @@ if __name__ == '__main__':
                 df = pd.DataFrame.from_dict(term_tweets)
                 list_of_tweets.append(df["full_text"].values.tolist()[0])
             except:
-                print("error for this term: "+term)
+                print("error for this term: " + term)
                 list_of_tweets.append(np.NAN)
         # print(list_of_tweets)
         document = '. '.join(list_of_tweets)
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
+
+
+if __name__ == '__main__':
+    # initialize a logger :
+    logger = logsetup()
+    logger.info("H-TFIDF expirements starts")
+
+    # Comment below if you don't want to rebuild matrixOccurence
+    # Query Elastic Search : From now only on UK (see functions var below)
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
+    query = open(query_fname, "r").read()
+    logger.info("elasticsearch : start quering")
+    tweetsByCityAndDate = elasticsearchQuery(query_fname)
+    logger.info("elasticsearch : stop quering")
+    # Build a matrix of occurence for each terms in document aggregate by city and day
+    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixAggDay"
+    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/elastic-query/results/matrixOccurence"
+    logger.info("Build matrix of occurence : start")
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
+    logger.info("Build matrix of occurence : stop")
+
+    # TF-IDF adaptative
+    ## import matrixOccurence if you don't want to re-build it
     """
-    print("end")
+    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    """
+    ### Filter city and period
+    """
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    """
+
+    """
+    ## Compute TF-IDF
+    TFIDFAdaptative(matrixOcc=matrixOccurence, listOfcities=listOfCity, spatialLevel='state', period=tfidfPeriod)
+    """
