@@ -58,7 +58,7 @@ def elasticsearchQuery(query_fname, logger):
     index = "twitter"
     # Define a Query
     query = open(query_fname, "r").read()
-    result = Elasticsearch.search(client, index=index, body=query, scroll='5m')
+    result = Elasticsearch.search(client, index=index, body=query, scroll='2m', size=5000)
 
     # Append all pages form scroll search : avoid the 10k limitation of ElasticSearch
     results = avoid10kquerylimitation(result, client, logger)
@@ -67,7 +67,7 @@ def elasticsearchQuery(query_fname, logger):
     tweetsByCityAndDate = defaultdict(list)
     for hits in results:
         # if city properties is available on OSM
-        # print(json.dumps(hits["_source"]["rest"]["features"][0]["properties"], indent=4))
+        print(json.dumps(hits["_source"], indent=4))
         if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
             # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
             inDate = hits["_source"]["created_at"]
