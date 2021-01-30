@@ -3,6 +3,7 @@
 """
 analyse Elasticsearch query
 """
+import json
 from time import sleep
 
 from elasticsearch import Elasticsearch
@@ -41,7 +42,6 @@ from transformers import pipeline
 import logging
 from logging.handlers import RotatingFileHandler
 
-
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
 temporalLevels = ['day', 'week', 'month', 'period']
@@ -66,21 +66,33 @@ def elasticsearchQuery(query_fname, logger):
     # Initiate a dict for each city append all Tweets content
     tweetsByCityAndDate = defaultdict(list)
     for hits in results:
-        # if city properties is available on OSM
-        print(json.dumps(hits["_source"], indent=4))
-        if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
-            # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
-            inDate = hits["_source"]["created_at"]
-            parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
-            cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
-                               str(hits["_source"]["rest"]["features"][0]["properties"]["state"]) + "_" + \
+        # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
+        inDate = hits["_source"]["created_at"]
+        parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
+        try:  # sometimes users defined only country (no city)
+            # if city properties is available on OSM
+            if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
+                # locaties do not necessarily have an associated stated
+                try:
+                    cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
+                                       str(hits["_source"]["rest"]["features"][0]["properties"]["state"]) + "_" + \
+                                       str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+                except:
+                    logger.debug(hits["_source"]["rest"]["features"][0]["properties"]["city"] + " has no state")
+                    print(json.dumps(hits["_source"], indent=4))
+                    cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
+                                       str("none") + "_" + \
+                                       str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+        except:
+            cityStateCountry = str("none") + "_" + \
+                               str("none") + "_" + \
                                str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
-            tweetsByCityAndDate[cityStateCountry].append(
-                {
-                    "tweet": preprocessTweets(hits["_source"]["full_text"]),
-                    "created_at": parseDate
-                }
-            )
+        tweetsByCityAndDate[cityStateCountry].append(
+            {
+                "tweet": preprocessTweets(hits["_source"]["full_text"]),
+                "created_at": parseDate
+            }
+        )
     # biotexInputBuilder(tweetsByCityAndDate)
     # pprint(tweetsByCityAndDate)
     return tweetsByCityAndDate
@@ -94,7 +106,7 @@ def avoid10kquerylimitation(result, client, logger):
     :return:
     """
     scroll_size = result['hits']['total']["value"]
-    logger.info("Number of elasticsearch scroll: "+str(scroll_size))
+    logger.info("Number of elasticsearch scroll: " + str(scroll_size))
     results = []
     # Progress bar
     pbar = tqdm(total=scroll_size)
@@ -366,7 +378,8 @@ def biotexAdaptativeBuilderAdaptative(listOfcities='all', spatialLevel='city', p
     f.close()
 
 
-def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities='all', spatialLevel='city', period='all', temporalLevel='day'):
+def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities='all', spatialLevel='city',
+           period='all', temporalLevel='day'):
     """
     Aggregate on spatial and temporel and then compute TF-IDF
 
@@ -1185,8 +1198,10 @@ def get_nb_of_tweets_with_spatio_temporal_filter():
         except:
             state_no_uk = str(hit["_source"]["rest"]["features"][0]["properties"]["city"] + " " + state)
             list_of_unboundaries_state.append(state_no_uk)
-    print("get_nb_of_tweets_with_spatio_temporal_filter(): List of unique location outside of UK: "+str(set(list_of_unboundaries_state)))
+    print("get_nb_of_tweets_with_spatio_temporal_filter(): List of unique location outside of UK: " + str(
+        set(list_of_unboundaries_state)))
     return nb_tweets_by_state
+
 
 def logsetup(log_fname):
     """
@@ -1199,7 +1214,7 @@ def logsetup(log_fname):
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
     now = datetime.now()
-    file_handler = RotatingFileHandler(log_fname+"_"+now.strftime("%Y-%m-%d_%H-%M-%S")+".log", 'a', 1000000, 1)
+    file_handler = RotatingFileHandler(log_fname + "_" + now.strftime("%Y-%m-%d_%H-%M-%S") + ".log", 'a', 1000000, 1)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
@@ -1208,6 +1223,7 @@ def logsetup(log_fname):
     stream_handler.setLevel(logging.INFO)
     logger.addHandler(stream_handler)
     return logger
+
 
 def ECIR20():
     # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
@@ -1868,6 +1884,6 @@ if __name__ == '__main__':
     ## Compute TF-IDF
     matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
     biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
-    #HTFIDF(matrixOcc=matrixOccurence, spatialLevel='country', period=tfidfPeriod)
+    # HTFIDF(matrixOcc=matrixOccurence, spatialLevel='country', period=tfidfPeriod)
 
     logger.info("H-TFIDF expirements stops")
