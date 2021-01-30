@@ -79,14 +79,19 @@ def elasticsearchQuery(query_fname, logger):
                                        str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
                 except:
                     logger.debug(hits["_source"]["rest"]["features"][0]["properties"]["city"] + " has no state")
-                    print(json.dumps(hits["_source"], indent=4))
                     cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
                                        str("none") + "_" + \
                                        str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
         except:
-            cityStateCountry = str("none") + "_" + \
-                               str("none") + "_" + \
-                               str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+            # print(json.dumps(hits["_source"], indent=4))
+            try:  # sometimes geocoding is just bad .... skip and jump to the next iterator
+                cityStateCountry = str("none") + "_" + \
+                                   str("none") + "_" + \
+                                   str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+            except:
+                cityStateCountry = str("none") + "_" + \
+                                   str("none") + "_" + \
+                                   str("non")
         tweetsByCityAndDate[cityStateCountry].append(
             {
                 "tweet": preprocessTweets(hits["_source"]["full_text"]),
@@ -230,7 +235,7 @@ def preprocessTerms(document):
     return doc
 
 
-def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout):
+def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout, logger):
     """
     Create a matrix of :
         - line : (city,day)
@@ -257,19 +262,22 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         period = matrix['created_at'].dt.date
         period = period.unique()
         period.sort()
-        for day in period:
+        tqdm(range(period))
+        logger.info("start full_text concatenation for city & day")
+        for day in tqdm(range(period)):
             # aggregate city and date document
             document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
             # Bag of Words and preprocces
-            # bagOfWords = preprocessTerms(document).split(" ")
+            bagOfWords = preprocessTerms(document).split(" ")
             tweetsOfDayAndCity = {
                 'city': city,
                 'day': day,
-                'tweetsList': document,
+                'tweetsList': bagOfWords,
                 #    'bow': bagOfWords
             }
             cityDayList.append(city + "_" + str(day))
             matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
+    logger.info("Saving file: matrix of full_text concatenated by day & city: "+str(matrixAggDay_fout))
     matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
@@ -282,7 +290,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     # voc = cd.vocabulary_
     # listOfTerms = {term for term, index in sorted(voc.items(), key=lambda item: item[1])}
     listOfTerms = cd.get_feature_names()
-    ## initiate matrix with count for each terms
+    ##initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
     ## Remove stopword
     for term in matrixOccurence.keys():
@@ -290,6 +298,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
             del matrixOccurence[term]
 
     # save to file
+    logger.info("Saving file: occurence of term: "+str(matrixOccurence_fout))
     matrixOccurence.to_csv(matrixOccurence_fout)
     return matrixOccurence
 
@@ -1862,10 +1871,10 @@ if __name__ == '__main__':
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
     logger.info("elasticsearch : stop quering")
     # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay"
-    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence"
+    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
+    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
     logger.info("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath)
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
     logger.info("Build matrix of occurence : stop")
 
     # TF-IDF adaptative
