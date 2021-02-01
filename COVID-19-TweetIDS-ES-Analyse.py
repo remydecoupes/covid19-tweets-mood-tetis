@@ -74,7 +74,7 @@ def elasticsearchQuery(query_fname, logger):
             geocoding = hits["_source"]["rest"]["features"][0]["properties"]
         except:
             continue # skip this iteraction
-        if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
+        if "country" in hits["_source"]["rest"]["features"][0]["properties"]:
             # locaties do not necessarily have an associated stated
             try:
                 cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
@@ -150,9 +150,9 @@ def preprocessTweets(text):
     textclean = re.sub('((www\.[^\s]+)|(https?://[^\s]+)|(http?://[^\s]+))', '', text)
     textclean = re.sub(r'http\S+', '', textclean)
     # remove usernames
-    textclean = re.sub('@[^\s]+', '', textclean)
+    # textclean = re.sub('@[^\s]+', '', textclean)
     # remove the # in #hashtag
-    textclean = re.sub(r'#([^\s]+)', r'\1', textclean)
+    # textclean = re.sub(r'#([^\s]+)', r'\1', textclean)
     return textclean
 
 
@@ -242,10 +242,8 @@ def preprocessTerms(document):
     return doc
 
 def sklearn_vectorizer_no_number_preprocessor(tokens):
-    # This delete token containing number
-    r = re.sub(r"[0-9]+[a-z]+","NUM",tokens.lower())
     # This replace digit by "NUM"
-    # r = re.sub('(\d)+', 'NUM', tokens.lower())
+    r = re.sub('(\d)+', 'NUM', tokens.lower())
     # This alternative just removes numbers:
     # r = re.sub('(\d)+', '', tokens.lower())
     return r
@@ -304,8 +302,12 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     # Count terms with sci-kit learn
     cd = CountVectorizer(
         stop_words='english',
-        preprocessor=sklearn_vectorizer_no_number_preprocessor,
-        strip_accents = "ascii") # remove token with special character (trying to keep only english word)
+        #preprocessor=sklearn_vectorizer_no_number_preprocessor,
+        min_df=2, # token at least present in 2 cities : reduce size of matrix
+        ngram_range=(1,2),
+        token_pattern='[a-zA-Z0-9@#]+',
+        # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
+    )
     cd.fit(matrixAggDay['tweetsList'])
     res = cd.transform(matrixAggDay["tweetsList"])
     countTerms = res.todense()
@@ -1245,7 +1247,7 @@ def logsetup(log_fname):
     """
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(message)s')
+    formatter = logging.Formatter('%(asctime)s :: %(levelname)s :: %(funcName)20s() ::%(message)s')
     now = datetime.now()
     file_handler = RotatingFileHandler(log_fname + "_" + now.strftime("%Y-%m-%d_%H-%M-%S") + ".log", 'a', 1000000, 1)
     file_handler.setLevel(logging.DEBUG)
@@ -1889,8 +1891,8 @@ if __name__ == '__main__':
 
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en_2020-02-01_08.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en.txt"
+    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
@@ -1918,6 +1920,11 @@ if __name__ == '__main__':
     ## Compute TF-IDF
     matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
     biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
-    # HTFIDF(matrixOcc=matrixOccurence, spatialLevel='country', period=tfidfPeriod)
+    logger.info("H-TFIDF : start to compute")
+    HTFIDF(matrixOcc=matrixOccurence,
+           matrixHTFIDF_fname=matrixHTFIDF_fname,
+           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+           spatialLevel='country')
+    logger.info("H-TFIDF : stop to compute")
 
     logger.info("H-TFIDF expirements stops")
