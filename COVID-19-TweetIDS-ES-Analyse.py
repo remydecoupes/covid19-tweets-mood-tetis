@@ -254,6 +254,8 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     matrixAggDay = pd.DataFrame(columns=col)
     cityDayList = []
 
+    logger.info("start full_text concatenation for city & day")
+    pbar = tqdm(total=len(tweetsofcity))
     for city in tweetsofcity:
         # create a table with 2 columns : tweet and created_at for a specific city
         matrix = pd.DataFrame(tweetsofcity[city])
@@ -262,26 +264,29 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         period = matrix['created_at'].dt.date
         period = period.unique()
         period.sort()
-        tqdm(range(period))
-        logger.info("start full_text concatenation for city & day")
-        for day in tqdm(range(period)):
+        for day in period:
             # aggregate city and date document
             document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
             # Bag of Words and preprocces
-            bagOfWords = preprocessTerms(document).split(" ")
+            # preproccesFullText = preprocessTerms(document)
             tweetsOfDayAndCity = {
                 'city': city,
                 'day': day,
-                'tweetsList': bagOfWords,
-                #    'bow': bagOfWords
+                'tweetsList': document
             }
             cityDayList.append(city + "_" + str(day))
-            matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
+            try:
+                matrixAggDay = matrixAggDay.append(tweetsOfDayAndCity, ignore_index=True)
+            except:
+                print("full_text empty after pre-process: "+document)
+                continue
+        pbar.update(1)
+    pbar.close()
     logger.info("Saving file: matrix of full_text concatenated by day & city: "+str(matrixAggDay_fout))
     matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
-    cd = CountVectorizer()
+    cd = CountVectorizer(stop_words='english')
     cd.fit(matrixAggDay['tweetsList'])
     res = cd.transform(matrixAggDay["tweetsList"])
     countTerms = res.todense()
