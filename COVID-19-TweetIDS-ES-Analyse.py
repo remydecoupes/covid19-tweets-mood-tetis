@@ -69,35 +69,42 @@ def elasticsearchQuery(query_fname, logger):
         # parse Java date : EEE MMM dd HH:mm:ss Z yyyy
         inDate = hits["_source"]["created_at"]
         parseDate = datetime.strptime(inDate, "%a %b %d %H:%M:%S %z %Y")
-        try:  # sometimes users defined only country (no city)
-            # if city properties is available on OSM
-            if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
-                # locaties do not necessarily have an associated stated
+
+        try:# geodocing may be bad
+            geocoding = hits["_source"]["rest"]["features"][0]["properties"]
+        except:
+            continue # skip this iteraction
+        if "city" in hits["_source"]["rest"]["features"][0]["properties"]:
+            # locaties do not necessarily have an associated stated
+            try:
+                cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
+                                   str(hits["_source"]["rest"]["features"][0]["properties"]["state"]) + "_" + \
+                                   str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+            except: # there is no state in geocoding
                 try:
-                    cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
-                                       str(hits["_source"]["rest"]["features"][0]["properties"]["state"]) + "_" + \
-                                       str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
-                except:
                     logger.debug(hits["_source"]["rest"]["features"][0]["properties"]["city"] + " has no state")
                     cityStateCountry = str(hits["_source"]["rest"]["features"][0]["properties"]["city"]) + "_" + \
                                        str("none") + "_" + \
                                        str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+                except: # there is no city as well : only country
+                    # print(json.dumps(hits["_source"], indent=4))
+                    try:  #
+                        cityStateCountry = str("none") + "_" + \
+                                           str("none") + "_" + \
+                                           str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
+                    except:
+                        cityStateCountry = str("none") + "_" + \
+                                           str("none") + "_" + \
+                                           str("none")
+        try:
+            tweetsByCityAndDate[cityStateCountry].append(
+                {
+                    "tweet": preprocessTweets(hits["_source"]["full_text"]),
+                    "created_at": parseDate
+                }
+            )
         except:
-            # print(json.dumps(hits["_source"], indent=4))
-            try:  # sometimes geocoding is just bad .... skip and jump to the next iterator
-                cityStateCountry = str("none") + "_" + \
-                                   str("none") + "_" + \
-                                   str(hits["_source"]["rest"]["features"][0]["properties"]["country"])
-            except:
-                cityStateCountry = str("none") + "_" + \
-                                   str("none") + "_" + \
-                                   str("non")
-        tweetsByCityAndDate[cityStateCountry].append(
-            {
-                "tweet": preprocessTweets(hits["_source"]["full_text"]),
-                "created_at": parseDate
-            }
-        )
+            print(json.dumps(hits["_source"], indent=4))
     # biotexInputBuilder(tweetsByCityAndDate)
     # pprint(tweetsByCityAndDate)
     return tweetsByCityAndDate
@@ -234,6 +241,15 @@ def preprocessTerms(document):
     doc = removesinglechar(doc)  # apostrophe create new single char
     return doc
 
+def sklearn_vectorizer_no_number_preprocessor(tokens):
+    # This delete token containing number
+    r = re.sub(r"[0-9]+[a-z]+","NUM",tokens.lower())
+    # This replace digit by "NUM"
+    # r = re.sub('(\d)+', 'NUM', tokens.lower())
+    # This alternative just removes numbers:
+    # r = re.sub('(\d)+', '', tokens.lower())
+    return r
+
 
 def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout, logger):
     """
@@ -286,7 +302,10 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
-    cd = CountVectorizer(stop_words='english')
+    cd = CountVectorizer(
+        stop_words='english',
+        preprocessor=sklearn_vectorizer_no_number_preprocessor,
+        strip_accents = "ascii") # remove token with special character (trying to keep only english word)
     cd.fit(matrixAggDay['tweetsList'])
     res = cd.transform(matrixAggDay["tweetsList"])
     countTerms = res.todense()
@@ -1870,7 +1889,8 @@ if __name__ == '__main__':
 
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
+    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europe_en_2020-02-01_08.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
