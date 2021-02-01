@@ -435,17 +435,29 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
 
     matrixOcc["city"], matrixOcc["state"], matrixOcc["country"], matrixOcc["date"] = \
         zip(*matrixOcc.index.map(splitindex))
-    ## In space
-    if spatialLevel == 'city':
-        # do nothing
-        pass
-    elif spatialLevel == 'state':
-        matrixOcc = matrixOcc.groupby("state").sum()
-    elif spatialLevel == 'country':
-        matrixOcc = matrixOcc.groupby("country").sum()
+
+    if temporalLevel == 'day':
+        ## In space
+        if spatialLevel == 'city':
+            # do nothing
+            pass
+        elif spatialLevel == 'state' and temporalLevel == 'day':
+            matrixOcc = matrixOcc.groupby("state").sum()
+        elif spatialLevel == 'country' and temporalLevel == 'day':
+            matrixOcc = matrixOcc.groupby("country").sum()
+    elif temporalLevel == "week":
+        matrixOcc.date = pd.to_datetime((matrixOcc.date)) # convert date into datetime
+        ## in space and time
+        if spatialLevel == 'country':
+            matrixOcc = matrixOcc.groupby(["country", pd.Grouper(key="date", freq="W-MON")]).sum()
+        elif spatialLevel == 'state':
+            matrixOcc = matrixOcc.groupby(["state", pd.Grouper(key="date", freq="W-MON")]).sum()
+        elif spatialLevel == 'city':
+            matrixOcc = matrixOcc.groupby(["city", pd.Grouper(key="date", freq="W-MON")]).sum()
+
 
     # Compute TF-IDF
-    ## compute TF : for each doc, devide count by Sum of all count
+    ## compute TF : for each doc, devide count by Sum of all count
     ### Sum fo all count by row
     matrixOcc['sumCount'] = matrixOcc.sum(axis=1)
     ### Devide each cell by these sums
@@ -1891,8 +1903,8 @@ if __name__ == '__main__':
 
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en.txt"
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
+    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
@@ -1924,7 +1936,9 @@ if __name__ == '__main__':
     HTFIDF(matrixOcc=matrixOccurence,
            matrixHTFIDF_fname=matrixHTFIDF_fname,
            biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel='country')
+           spatialLevel='country',
+           temporalLevel='week',
+           )
     logger.info("H-TFIDF : stop to compute")
 
     logger.info("H-TFIDF expirements stops")
