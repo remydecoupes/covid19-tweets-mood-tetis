@@ -1894,6 +1894,48 @@ def ECIR20():
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
 
+def t_SNE_bert_embedding_visualization():
+    """
+    TODO: under dev! !!!!
+    :return:
+    """
+    import pandas as pd
+    from sentence_transformers import SentenceTransformer
+
+    modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
+    data = pd.read_csv("elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv")
+    dataUK = data[(data["country"] == "United Kingdom") & (data["date"] == "2020-02-03")].transpose()
+    dataUK.columns = ["col"]
+    dataGermany = data[(data["country"] == "Germany") & (data["date"] == "2020-02-03")].transpose()
+    dataGermany.columns = ["col"]
+    embeddings = modelSentenceTransformer.encode(dataUK['col'].to_list() + dataGermany['col'].to_list(),
+                                                 show_progress_bar=True)
+
+    from sklearn.manifold import TSNE
+    modelTSNE = TSNE(n_components=2)  # n_components means the lower dimension
+    low_dim_data = modelTSNE.fit_transform(embeddings)
+
+    uk = pd.Series("uk", index=range(502), dtype=str)
+    germany = pd.Series("germany", index=range(502), dtype=str)
+    label_tsne = pd.concat([uk, germany])
+
+    import seaborn as sns
+    # Style Plots a bit
+    sns.set_style('darkgrid')
+    sns.set_palette('muted')
+    sns.set_context("notebook", font_scale=1, rc={"lines.linewidth": 2.5})
+
+    import matplotlib as plt
+    plt.rcParams['figure.figsize'] = (20, 14)
+    import matplotlib.pyplot as plt1
+
+    tsne_df = pd.DataFrame(low_dim_data, label_tsne)
+    tsne_df.columns = ['x', 'y']
+    ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
+    # ax = sns.scatterplot(data=tsne_df, hue=tsne_df.index)
+    ax.set_title('T-SNE BERT Sentence Embeddings, colored by country')
+
+
 
 if __name__ == '__main__':
     # initialize a logger :
@@ -1904,7 +1946,8 @@ if __name__ == '__main__':
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
+    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
