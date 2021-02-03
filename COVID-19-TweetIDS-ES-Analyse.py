@@ -909,14 +909,19 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         matrix_by_locality = matrixAllTweets[matrixAllTweets[spatial_hiearchy] == locality]
         vectorizer = TfidfVectorizer(
             stop_words='english',
+            min_df=0.1,
             ngram_range=(1, 2),
             token_pattern='[a-zA-Z0-9@#]+',
         )
         # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
-        vectors = vectorizer.fit_transform(matrix_by_locality['tweet'])
-        feature_names = vectorizer.get_feature_names()
-        dense = vectors.todense()
-        denselist = dense.tolist()
+        try:
+            vectors = vectorizer.fit_transform(matrix_by_locality['tweet'])
+            feature_names = vectorizer.get_feature_names()
+            dense = vectors.todense()
+            denselist = dense.tolist()
+        except:
+            logger.info("Impossible to compute TF-IDF on: "+locality)
+            continue
         ## matrixTFIDF
         TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
         logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality+"_corpus.csv")
@@ -961,7 +966,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         extractBiggestTF[spatial_hiearchy] = locality
         extractBiggestTF_allstates = extractBiggestTF_allstates.append(extractBiggestTF, ignore_index=True)
 
-    logger.info("saving TF and TF-IDF top"+nb_biggest_terms+" biggest score")
+    logger.info("saving TF and TF-IDF top"+str(nb_biggest_terms)+" biggest score")
     extractBiggestTF_allstates.to_csv(path_for_filesaved+"/TF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
     extractBiggestTFIDF_allstates.to_csv(path_for_filesaved+"/TF-IDF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
 
