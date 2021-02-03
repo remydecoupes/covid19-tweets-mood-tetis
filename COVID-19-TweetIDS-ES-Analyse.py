@@ -186,6 +186,7 @@ def preprocessTerms(document):
     """
     Pre process Terms according to
     https://towardsdatascience.com/tf-idf-for-document-ranking-from-scratch-in-python-on-real-world-dataset-796d339a4089
+    /!\ Be carefull : it has a long execution time
     :param:
     :return:
     """
@@ -240,14 +241,6 @@ def preprocessTerms(document):
     doc = removepunctuation(doc)
     doc = removesinglechar(doc)  # apostrophe create new single char
     return doc
-
-def sklearn_vectorizer_no_number_preprocessor(tokens):
-    # This replace digit by "NUM"
-    r = re.sub('(\d)+', 'NUM', tokens.lower())
-    # This alternative just removes numbers:
-    # r = re.sub('(\d)+', '', tokens.lower())
-    return r
-
 
 def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout, logger):
     """
@@ -909,7 +902,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         matrix_by_locality = matrixAllTweets[matrixAllTweets[spatial_hiearchy] == locality]
         vectorizer = TfidfVectorizer(
             stop_words='english',
-            min_df=0.1,
+            min_df=0.001,
             ngram_range=(1, 2),
             token_pattern='[a-zA-Z0-9@#]+',
         )
@@ -927,12 +920,10 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality+"_corpus.csv")
         TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality+"_corpus.csv")
         ## Extract N TOP ranking score
-        extractBiggest = TFIDFClassical.stack().nlargest(nb_biggest_terms)
-        ### Reset index becaus stack create a multi-index (2 level : old index + terms)
-        extractBiggest = extractBiggest.reset_index(level=[0, 1])
-        extractBiggest.columns = ['old-index', 'terms', 'score']
-        del extractBiggest['old-index']
-        extractBiggest = extractBiggest.drop_duplicates(subset='terms', keep="first")
+        extractBiggest = TFIDFClassical.max().nlargest(nb_biggest_terms)
+        extractBiggest = extractBiggest.to_frame()
+        extractBiggest = extractBiggest.reset_index()
+        extractBiggest.columns = ['terms', 'score']
         extractBiggest[spatial_hiearchy] = locality
         extractBiggestTFIDF_allstates = extractBiggestTFIDF_allstates.append(extractBiggest, ignore_index=True)
 
@@ -957,12 +948,10 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         logger.info("saving TF File: "+path_for_filesaved+"/tf_on_"+locality+"_corpus.csv")
         TFClassical.to_csv(path_for_filesaved+"/tf_on_"+locality+"_corpus.csv")
         ## Extract N TOP ranking score
-        extractBiggestTF = TFClassical.stack().nlargest(nb_biggest_terms)
-        ### Reset index becaus stack create a multi-index (2 level : old index + terms)
-        extractBiggestTF = extractBiggestTF.reset_index(level=[0, 1])
-        extractBiggestTF.columns = ['old-index', 'terms', 'score']
-        del extractBiggestTF['old-index']
-        extractBiggestTF = extractBiggestTF.drop_duplicates(subset='terms', keep="first")
+        extractBiggestTF = TFClassical.max().nlargest(nb_biggest_terms)
+        extractBiggestTF = extractBiggestTF.to_frame()
+        extractBiggestTF = extractBiggestTF.reset_index()
+        extractBiggestTF.columns = ['terms', 'score']
         extractBiggestTF[spatial_hiearchy] = locality
         extractBiggestTF_allstates = extractBiggestTF_allstates.append(extractBiggestTF, ignore_index=True)
 
