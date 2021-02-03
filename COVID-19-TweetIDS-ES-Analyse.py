@@ -41,6 +41,10 @@ from transformers import pipeline
 # LOG
 import logging
 from logging.handlers import RotatingFileHandler
+# t-SNE
+from sentence_transformers import SentenceTransformer
+from sklearn.manifold import TSNE
+import seaborn as sns
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -917,8 +921,8 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
             continue
         ## matrixTFIDF
         TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
-        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality+"_corpus.csv")
-        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality+"_corpus.csv")
+        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality.replace("/", "_")+"_corpus.csv")
+        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality.replace("/", "_")+"_corpus.csv")
         ## Extract N TOP ranking score
         extractBiggest = TFIDFClassical.max().nlargest(nb_biggest_terms)
         extractBiggest = extractBiggest.to_frame()
@@ -945,8 +949,8 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         ## matrixTF
         TFClassical = pd.DataFrame(countTerms.tolist(), columns=listOfTermsTF)
         ### save in file
-        logger.info("saving TF File: "+path_for_filesaved+"/tf_on_"+locality+"_corpus.csv")
-        TFClassical.to_csv(path_for_filesaved+"/tf_on_"+locality+"_corpus.csv")
+        logger.info("saving TF File: "+path_for_filesaved+"/tf_on_"+locality.replace("/", "_")+"_corpus.csv")
+        TFClassical.to_csv(path_for_filesaved+"/tf_on_"+locality.replace("/", "_")+"_corpus.csv")
         ## Extract N TOP ranking score
         extractBiggestTF = TFClassical.max().nlargest(nb_biggest_terms)
         extractBiggestTF = extractBiggestTF.to_frame()
@@ -1913,9 +1917,6 @@ def t_SNE_bert_embedding_visualization():
     + https://github.com/UKPLab/sentence-transformers
     :return:
     """
-    import pandas as pd
-    from sentence_transformers import SentenceTransformer
-
     modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
     data = pd.read_csv("elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv")
     dataUK = data[(data["country"] == "United Kingdom") & (data["date"] == "2020-02-03")].transpose()
@@ -1925,7 +1926,6 @@ def t_SNE_bert_embedding_visualization():
     embeddings = modelSentenceTransformer.encode(dataUK['col'].to_list() + dataGermany['col'].to_list(),
                                                  show_progress_bar=True)
 
-    from sklearn.manifold import TSNE
     modelTSNE = TSNE(n_components=2)  # n_components means the lower dimension
     low_dim_data = modelTSNE.fit_transform(embeddings)
 
@@ -1933,13 +1933,11 @@ def t_SNE_bert_embedding_visualization():
     germany = pd.Series("germany", index=range(502), dtype=str)
     label_tsne = pd.concat([uk, germany])
 
-    import seaborn as sns
     # Style Plots a bit
     sns.set_style('darkgrid')
     sns.set_palette('muted')
     sns.set_context("notebook", font_scale=1, rc={"lines.linewidth": 2.5})
 
-    import matplotlib as plt
     plt.rcParams['figure.figsize'] = (20, 14)
     import matplotlib.pyplot as plt1
 
@@ -1962,44 +1960,45 @@ if __name__ == '__main__':
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
+    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_3rdweekFeb.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
-    # logger.info("elasticsearch : stop quering")
+    logger.info("elasticsearch : stop quering")
 
-    # # Build a matrix of occurence for each terms in document aggregate by city and day
-    # matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
-    # matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
-    # logger.info("Build matrix of occurence : start")
-    # matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-    # logger.info("Build matrix of occurence : stop")
-    #
-    # # TF-IDF adaptative
-    # ## import matrixOccurence if you don't want to re-build it
-    # """
-    # # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-    # """
-    # ### Filter city and period
-    # """
-    # listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
-    # tfidfStartDate = date(2020, 1, 23)
-    # tfidfEndDate = date(2020, 1, 30)
-    # tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    # """
-    #
-    # ## Compute H-TFIDF
-    # matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
-    # biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
-    # logger.info("H-TFIDF : start to compute")
-    # HTFIDF(matrixOcc=matrixOccurence,
-    #        matrixHTFIDF_fname=matrixHTFIDF_fname,
-    #        biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-    #        spatialLevel='country',
-    #        temporalLevel='week',
-    #        )
-    # logger.info("H-TFIDF : stop to compute")
-    #
+    # Build a matrix of occurence for each terms in document aggregate by city and day
+    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
+    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
+    logger.info("Build matrix of occurence : start")
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+    logger.info("Build matrix of occurence : stop")
+
+    # TF-IDF adaptative
+    ## import matrixOccurence if you don't want to re-build it
+    """
+    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    """
+    ### Filter city and period
+    """
+    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    tfidfStartDate = date(2020, 1, 23)
+    tfidfEndDate = date(2020, 1, 30)
+    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    """
+
+    ## Compute H-TFIDF
+    matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
+    biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
+    logger.info("H-TFIDF : start to compute")
+    HTFIDF(matrixOcc=matrixOccurence,
+           matrixHTFIDF_fname=matrixHTFIDF_fname,
+           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+           spatialLevel='country',
+           temporalLevel='week',
+           )
+    logger.info("H-TFIDF : stop to compute")
+
     ## Comparison with TF-IDF
     ### On whole corpus
     ### By Country
