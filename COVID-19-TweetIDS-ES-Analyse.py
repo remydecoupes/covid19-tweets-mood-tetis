@@ -931,6 +931,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         extractBiggest[spatial_hiearchy] = locality
         extractBiggestTFIDF_allstates = extractBiggestTFIDF_allstates.append(extractBiggest, ignore_index=True)
 
+        """
         # Compute TF
         tf = CountVectorizer(
             stop_words='english',
@@ -958,6 +959,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         extractBiggestTF.columns = ['terms', 'score']
         extractBiggestTF[spatial_hiearchy] = locality
         extractBiggestTF_allstates = extractBiggestTF_allstates.append(extractBiggestTF, ignore_index=True)
+    """
 
     logger.info("saving TF and TF-IDF top"+str(nb_biggest_terms)+" biggest score")
     extractBiggestTF_allstates.to_csv(path_for_filesaved+"/TF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
@@ -1909,7 +1911,7 @@ def ECIR20():
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
 
-def t_SNE_bert_embedding_visualization():
+def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all", spatial_hieararchy="country"):
     """
     TODO: under dev! !!!!
     ressources:
@@ -1918,20 +1920,23 @@ def t_SNE_bert_embedding_visualization():
     :return:
     """
     modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
-    data = pd.read_csv("elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv")
-    dataUK = data[(data["country"] == "United Kingdom") & (data["date"] == "2020-02-03")].transpose()
-    dataUK.columns = ["col"]
-    dataGermany = data[(data["country"] == "Germany") & (data["date"] == "2020-02-03")].transpose()
-    dataGermany.columns = ["col"]
-    embeddings = modelSentenceTransformer.encode(dataUK['col'].to_list() + dataGermany['col'].to_list(),
-                                                 show_progress_bar=True)
+    # data = pd.read_csv("elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv")
+    # dataUK = data[(data["country"] == "United Kingdom") & (data["date"] == "2020-02-03")].transpose()
+    # dataUK.columns = ["col"]
+    # dataGermany = data[(data["country"] == "Germany") & (data["date"] == "2020-02-03")].transpose()
+    # dataGermany.columns = ["col"]
+
+    # filter by localities
+    for locality in biggest_score[spatial_hieararchy].unique():
+        if locality not in listOfLocalities:
+            biggest_score = biggest_score.drop(biggest_score[biggest_score[spatial_hieararchy] == locality].index)
+
+    embeddings = modelSentenceTransformer.encode(biggest_score['terms'].to_list(), show_progress_bar=True)
 
     modelTSNE = TSNE(n_components=2)  # n_components means the lower dimension
     low_dim_data = modelTSNE.fit_transform(embeddings)
 
-    uk = pd.Series("uk", index=range(502), dtype=str)
-    germany = pd.Series("germany", index=range(502), dtype=str)
-    label_tsne = pd.concat([uk, germany])
+    label_tsne = biggest_score[spatial_hieararchy]
 
     # Style Plots a bit
     sns.set_style('darkgrid')
@@ -1939,13 +1944,13 @@ def t_SNE_bert_embedding_visualization():
     sns.set_context("notebook", font_scale=1, rc={"lines.linewidth": 2.5})
 
     plt.rcParams['figure.figsize'] = (20, 14)
-    import matplotlib.pyplot as plt1
 
     tsne_df = pd.DataFrame(low_dim_data, label_tsne)
     tsne_df.columns = ['x', 'y']
     ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
     # ax = sns.scatterplot(data=tsne_df, hue=tsne_df.index)
     ax.set_title('T-SNE BERT Sentence Embeddings, colored by country')
+    plt.show()
 
 
 
@@ -1961,7 +1966,7 @@ if __name__ == '__main__':
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_3rdweekFeb.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
@@ -2009,5 +2014,9 @@ if __name__ == '__main__':
                                path_for_filesaved="elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country",
                                spatial_hiearchy="country",
                                temporal_period='all')
+
+    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+    biggest_TFIDF = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+    t_SNE_bert_embedding_visualization(biggest_TFIDF, listOfLocalities=listOfLocalities)
 
     logger.info("H-TFIDF expirements stops")
