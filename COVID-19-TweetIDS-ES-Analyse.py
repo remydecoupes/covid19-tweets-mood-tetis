@@ -483,7 +483,16 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0, top_n))
     for row in matrixTFIDF.index:
         extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
-    extractBiggest.to_csv(biggestHTFIDFscore_fname)
+    extractBiggest.to_csv(biggestHTFIDFscore_fname+".old.csv")
+    # Transpose this table in order to share the same structure with TF-IDF classifical biggest score :
+    hbt = pd.DataFrame()
+    for index, row in extractBiggest.iterrows():
+         hbtrow = pd.DataFrame(row.drop(["country", "date"]).values, columns=["terms"])
+         hbtrow["country"] = row["country"]
+         hbtrow["date"] = row["date"]
+         hbt = hbt.append(hbtrow, ignore_index=True)
+    hbt.to_csv(biggestHTFIDFscore_fname)
+
 
 
 def ldHHTFIDF(listOfcities):
