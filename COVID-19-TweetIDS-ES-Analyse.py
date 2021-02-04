@@ -486,12 +486,12 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     extractBiggest.to_csv(biggestHTFIDFscore_fname+".old.csv")
     # Transpose this table in order to share the same structure with TF-IDF classifical biggest score :
     hbt = pd.DataFrame()
-    extractBiggest.reset_index()
+    extractBiggest = extractBiggest.reset_index()
     for index, row in extractBiggest.iterrows():
-         hbtrow = pd.DataFrame(row.drop(["country", "date"]).values, columns=["terms"])
-         hbtrow["country"] = row["country"]
-         hbtrow["date"] = row["date"]
-         hbt = hbt.append(hbtrow, ignore_index=True)
+        hbtrow = pd.DataFrame(row.drop(["country", "date"]).values, columns=["terms"])
+        hbtrow["country"] = row["country"]
+        hbtrow["date"] = row["date"]
+        hbt = hbt.append(hbtrow, ignore_index=True)
     hbt.to_csv(biggestHTFIDFscore_fname)
 
 
@@ -1921,8 +1921,8 @@ def ECIR20():
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
 
-def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all",
-                                       spatial_hieararchy="country", plotname="colored by country"):
+def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all", spatial_hieararchy="country",
+                                       plotname="colored by country", paht2save="./"):
     """
     TODO: under dev! !!!!
     ressources:
@@ -1959,9 +1959,10 @@ def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all",
     tsne_df = pd.DataFrame(low_dim_data, label_tsne)
     tsne_df.columns = ['x', 'y']
     ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
-    ax.plt.ylim(-100,100)
-    ax.plt.xlim(-100, 100)
+    plt.ylim(-100,100)
+    plt.xlim(-100, 100)
     ax.set_title('T-SNE BERT Sentence Embeddings, '+plotname)
+    plt.savefig(paht2save+"/tsne_bert-embeddings_"+plotname)
     #plt.show()
 
 
@@ -1971,6 +1972,8 @@ if __name__ == '__main__':
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
+
+
 
     # Comment below if you don't want to rebuild matrixOccurence
     # Query Elastic Search : From now only on UK (see functions var below)
@@ -2019,7 +2022,6 @@ if __name__ == '__main__':
     ## Comparison with TF-IDF
     ### On whole corpus
     ### By Country
-    #def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500, path_for_filesaved="./", spatial_hiearchy="country", temporal_period='all', listOfCities='all'):
     TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
                                logger=logger,
                                nb_biggest_terms=500,
@@ -2027,12 +2029,14 @@ if __name__ == '__main__':
                                spatial_hiearchy="country",
                                temporal_period='all')
 
+
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     biggest_TFIDF = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
     biggest_H_TFIDF = pd.read_csv('elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv', index_col=0)
     t_SNE_bert_embedding_visualization(biggest_TFIDF, listOfLocalities=listOfLocalities,
-                                       plotname="TF-IDF on corpus = Country")
+                                       plotname="TF-IDF on corpus = Country",
+                                       paht2save="elasticsearch/analyse/nldb21/results/t-sne")
     t_SNE_bert_embedding_visualization(biggest_TFIDF, listOfLocalities=listOfLocalities,
-                                       plotname="H-TFIDF")
+                                       plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
 
     logger.info("H-TFIDF expirements stops")
