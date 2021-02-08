@@ -302,7 +302,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         min_df=2, # token at least present in 2 cities : reduce size of matrix
         ngram_range=(1,2),
-        token_pattern='[a-zA-Z0-9@#]+',
+        token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
     )
     cd.fit(matrixAggDay['tweetsList'])
@@ -419,7 +419,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     :param listOfcities: filter on this cities
     :param spatialLevel: city / state / country / world
     :param period: Filter on this period
-    :param temporalLevel: TBD
+    :param temporalLevel: day / week (month have to be implemented)
     :return:
     """
     matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfcities,
@@ -584,6 +584,7 @@ def concatenateHTFIDFBiggestscore():
 
 def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
     """
+    Only used for ECIR2020 not for NLDB2021
 
     :param number_of_term:
     :param dfToCompare:
@@ -627,6 +628,7 @@ def compareWithHTFIDF(number_of_term, dfToCompare, repToSave):
 
 def HTFIDF_comparewith_TFIDF_TF():
     """
+    Only used for ECIR2020 not for NLDB2021
     .. warnings:: /!\ under dev !!!. See TODO below
     .. todo::
         - Remove filter and pass it as args :
@@ -918,7 +920,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
             stop_words='english',
             min_df=0.001,
             ngram_range=(1, 2),
-            token_pattern='[a-zA-Z0-9@#]+',
+            token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
         )
         # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
         try:
@@ -974,6 +976,89 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
     logger.info("saving TF and TF-IDF top"+str(nb_biggest_terms)+" biggest score")
     extractBiggestTF_allstates.to_csv(path_for_filesaved+"/TF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
     extractBiggestTFIDF_allstates.to_csv(path_for_filesaved+"/TF-IDF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
+
+def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./",
+                             temporal_period='all', listOfCities='all'):
+    """
+    Compute TFIDF and TF from an elastic query file
+    1 doc = 1 tweet
+    Corpus = on the whole elastic query (with filter out cities that are not in listOfCities
+
+    :param elastic_query_fname: filename and path of the elastic query
+    :param logger: logger of the main program
+    :param nb_biggest_terms: How many biggest term are to keep. It has to be greater than H-TF-IDF or
+        TF-IDF classical on corpus = localité because a lot of temrs have 1.0 has the score
+    :param spatial_hiearchy: define the size of the corpus : state or country
+    :param temporal_period:
+    :param listOfCities: If you want to filter out some cities, you can
+    :return:
+    """
+    # tfidfStartDate = date(2020, 1, 23)
+    # tfidfEndDate = date(2020, 1, 30)
+    # temporal_period = pd.date_range(tfidfStartDate, tfidfEndDate)
+    # listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    # listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
+
+    # Query Elasticsearch to get all tweets from UK
+    tweets = elasticsearchQuery(elastic_query_fname, logger)
+    if listOfCities == 'all':
+        listOfCities = []
+        listOfStates = []
+        listOfCountry = []
+        for triple in tweetsByCityAndDate:
+            splitted = triple.split("_")
+            listOfCities.append(splitted[0])
+            listOfStates.append(splitted[1])
+            listOfCountry.append(splitted[2])
+        listOfCities = list(set(listOfCities))
+        listOfStates = list(set(listOfStates))
+        listOfCountry = list(set(listOfCountry))
+    # reorganie tweets (dict : tweets by cities) into dataframe (city and date)
+    matrixAllTweets = pd.DataFrame()
+    for tweetByCity in tweets.keys():
+        # Filter cities :
+        city = str(tweetByCity).split("_")[0]
+        if city in listOfCities:
+            matrix = pd.DataFrame(tweets[tweetByCity])
+            matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
+
+    # Split datetime into date and time
+    matrixAllTweets["date"] = [d.date() for d in matrixAllTweets['created_at']]
+    matrixAllTweets["time"] = [d.time() for d in matrixAllTweets['created_at']]
+
+    # Filter by a period
+    if temporal_period != "all":
+        mask = ((matrixAllTweets["date"] >= temporal_period.min()) & (matrixAllTweets["date"] <= temporal_period.max()))
+        matrixAllTweets = matrixAllTweets.loc[mask]
+
+    vectorizer = TfidfVectorizer(
+        stop_words='english',
+        min_df=0.001,
+        ngram_range=(1, 2),
+        token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
+    )
+    # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
+    try:
+        vectors = vectorizer.fit_transform(matrixAllTweets['tweet'])
+        feature_names = vectorizer.get_feature_names()
+        dense = vectors.todense()
+        denselist = dense.tolist()
+    except:
+        logger.info("Impossible to compute TF-IDF")
+        exit(-1)
+    ## matrixTFIDF
+    TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
+    logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_whole_corpus.csv")
+    TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_whole_corpus.csv")
+    ## Extract N TOP ranking score
+    extractBiggest = TFIDFClassical.max()
+    extractBiggest = extractBiggest[extractBiggest == 1] # we keep only term with high score TF-IDF, i.e 1.0
+    extractBiggest = extractBiggest.to_frame()
+    extractBiggest = extractBiggest.reset_index()
+    extractBiggest.columns = ['terms', 'score']
+
+    logger.info("saving  TF-IDF top"+str(extractBiggest['terms'].size)+" biggest score")
+    extractBiggest.to_csv(path_for_filesaved+"/TFIDF_BiggestScore_on_whole_corpus.csv")
 
 
 def compute_occurence_word_by_state():
@@ -1921,13 +2006,18 @@ def ECIR20():
         print(summarizer(document, max_length=130, min_length=30, do_sample=False))
     # end eval 13
 
-def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all", spatial_hieararchy="country",
+def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="all", spatial_hieararchy="country",
                                        plotname="colored by country", paht2save="./"):
     """
-    TODO: under dev! !!!!
+    Plot t-SNE representation of terms by country
     ressources:
-    + https://colab.research.google.com/drive/1FmREx0O4BDeogldyN74_7Lur5NeiOVye?usp=sharing#scrollTo=Fbq5MAv0jkft
-    + https://github.com/UKPLab/sentence-transformers
+        + https://colab.research.google.com/drive/1FmREx0O4BDeogldyN74_7Lur5NeiOVye?usp=sharing#scrollTo=Fbq5MAv0jkft
+        + https://github.com/UKPLab/sentence-transformers
+    :param biggest_score:
+    :param listOfLocalities:
+    :param spatial_hieararchy:
+    :param plotname:
+    :param paht2save:
     :return:
     """
     modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
@@ -1963,6 +2053,7 @@ def t_SNE_bert_embedding_visualization(biggest_score, listOfLocalities="all", sp
     plt.xlim(-100, 100)
     ax.set_title('T-SNE BERT Sentence Embeddings, '+plotname)
     plt.savefig(paht2save+"/tsne_bert-embeddings_"+plotname)
+    logger.info("file: "+paht2save+"/tsne_bert-embeddings_"+plotname+" has been saved.")
     #plt.show()
 
 
@@ -1987,56 +2078,60 @@ if __name__ == '__main__':
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
     logger.info("elasticsearch : stop quering")
 
-    # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
-    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
-    logger.info("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-    logger.info("Build matrix of occurence : stop")
-
-    # TF-IDF adaptative
-    ## import matrixOccurence if you don't want to re-build it
-    """
-    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-    """
-    ### Filter city and period
-    """
-    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
-    tfidfStartDate = date(2020, 1, 23)
-    tfidfEndDate = date(2020, 1, 30)
-    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    """
-
-    ## Compute H-TFIDF
-    matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
-    biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
-    logger.info("H-TFIDF : start to compute")
-    HTFIDF(matrixOcc=matrixOccurence,
-           matrixHTFIDF_fname=matrixHTFIDF_fname,
-           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel='country',
-           temporalLevel='week',
-           )
-    logger.info("H-TFIDF : stop to compute")
-
-    ## Comparison with TF-IDF
-    ### On whole corpus
-    ### By Country
-    TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
-                               logger=logger,
-                               nb_biggest_terms=500,
-                               path_for_filesaved="elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country",
-                               spatial_hiearchy="country",
-                               temporal_period='all')
+    # # Build a matrix of occurence for each terms in document aggregate by city and day
+    # matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
+    # matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
+    # logger.info("Build matrix of occurence : start")
+    # matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+    # logger.info("Build matrix of occurence : stop")
+    #
+    # # TF-IDF adaptative
+    # ## import matrixOccurence if you don't want to re-build it
+    # """
+    # # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    # """
+    # ### Filter city and period
+    # """
+    # listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    # tfidfStartDate = date(2020, 1, 23)
+    # tfidfEndDate = date(2020, 1, 30)
+    # tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    # """
+    #
+    # ## Compute H-TFIDF
+    # matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
+    # biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
+    # logger.info("H-TFIDF : start to compute")
+    # HTFIDF(matrixOcc=matrixOccurence,
+    #        matrixHTFIDF_fname=matrixHTFIDF_fname,
+    #        biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+    #        spatialLevel='country',
+    #        temporalLevel='week',
+    #        )
+    # logger.info("H-TFIDF : stop to compute")
+    #
+    # ## Comparison with TF-IDF
+    # ### On whole corpus
+    # ### By Country
+    # TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
+    #                            logger=logger,
+    #                            nb_biggest_terms=500,
+    #                            path_for_filesaved="elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country",
+    #                            spatial_hiearchy="country",
+    #                            temporal_period='all')
 
 
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     biggest_TFIDF = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
     biggest_H_TFIDF = pd.read_csv('elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv', index_col=0)
-    t_SNE_bert_embedding_visualization(biggest_TFIDF, listOfLocalities=listOfLocalities,
+    t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
                                        plotname="TF-IDF on corpus = Country",
                                        paht2save="elasticsearch/analyse/nldb21/results/t-sne")
-    t_SNE_bert_embedding_visualization(biggest_TFIDF, listOfLocalities=listOfLocalities,
+    t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
                                        plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
+
+    TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
+                             logger=logger,
+                             path_for_filesaved="elasticsearch/analyse/nldb21/results")
 
     logger.info("H-TFIDF expirements stops")
