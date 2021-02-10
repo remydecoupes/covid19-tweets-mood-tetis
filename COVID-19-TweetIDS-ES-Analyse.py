@@ -41,10 +41,14 @@ from transformers import pipeline
 # LOG
 import logging
 from logging.handlers import RotatingFileHandler
-# t-SNE
+# Word embedding for evaluation
 from sentence_transformers import SentenceTransformer
 from sklearn.manifold import TSNE
 import seaborn as sns
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy import sparse
+import scipy.spatial as sp
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -1005,7 +1009,7 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./
         listOfCities = []
         listOfStates = []
         listOfCountry = []
-        for triple in tweetsByCityAndDate:
+        for triple in tweets:
             splitted = triple.split("_")
             listOfCities.append(splitted[0])
             listOfStates.append(splitted[1])
@@ -2021,11 +2025,7 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
     :return:
     """
     modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
-    # data = pd.read_csv("elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv")
-    # dataUK = data[(data["country"] == "United Kingdom") & (data["date"] == "2020-02-03")].transpose()
-    # dataUK.columns = ["col"]
-    # dataGermany = data[(data["country"] == "Germany") & (data["date"] == "2020-02-03")].transpose()
-    # dataGermany.columns = ["col"]
+
 
     # filter by localities
     for locality in biggest_score[spatial_hieararchy].unique():
@@ -2033,6 +2033,7 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
             biggest_score = biggest_score.drop(biggest_score[biggest_score[spatial_hieararchy] == locality].index)
 
     embeddings = modelSentenceTransformer.encode(biggest_score['terms'].to_list(), show_progress_bar=True)
+    # embeddings.tofile(paht2save+"/tsne_bert-embeddings_"+plotname+"_matrix-embeddig")
 
     modelTSNE = TSNE(n_components=2)  # n_components means the lower dimension
     low_dim_data = modelTSNE.fit_transform(embeddings)
@@ -2051,12 +2052,80 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
     ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
     plt.ylim(-100,100)
     plt.xlim(-100, 100)
-    ax.set_title('T-SNE BERT Sentence Embeddings, '+plotname)
+    ax.set_title('T-SNE BERT Sentence Embeddings for '+plotname)
     plt.savefig(paht2save+"/tsne_bert-embeddings_"+plotname)
     logger.info("file: "+paht2save+"/tsne_bert-embeddings_"+plotname+" has been saved.")
     #plt.show()
+    plt.close()
 
+    # Perform kmean clustering
+    # num_clusters = 5
+    # clustering_model = KMeans(n_clusters=num_clusters)
+    # clustering_model.fit(embeddings)
+    # cluster_assignment = clustering_model.labels_
 
+    # Normalize the embeddings to unit length
+    corpus_embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+
+    # Perform kmean clustering
+    clustering_model = AgglomerativeClustering(n_clusters=None,
+                                               distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
+    clustering_model.fit(corpus_embeddings)
+    cluster_assignment = clustering_model.labels_
+
+    # clustered_sentences = [[] for i in range(num_clusters)]
+    # for sentence_id, cluster_id in enumerate(cluster_assignment):
+    #     clustered_sentences[cluster_id].append(biggest_score['terms'].iloc[sentence_id])
+
+    clustered_sentences = {}
+    for sentence_id, cluster_id in enumerate(cluster_assignment):
+        if cluster_id not in clustered_sentences:
+            clustered_sentences[cluster_id] = []
+
+        clustered_sentences[cluster_id].append(biggest_score['terms'].iloc[sentence_id])
+
+    #for i, cluster in enumerate(clustered_sentences):
+    for i, cluster in clustered_sentences.items():
+        print("Cluster ", i+1)
+        print(cluster)
+        print("")
+
+def bert_embedding_filtred(biggest_score, listOfLocalities="all", spatial_hieararchy="country"):
+    """
+    Retrieve embedding of a matrix of termes (possibility of filtring by a list of locality)
+    :param biggest_score: pd.Datraframe with columns : [terms, country/state/city]
+    :param listOfLocalities:
+    :param spatial_hieararchy:
+    :return:
+    """
+    modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
+    # filter by localities
+    if listOfLocalities != "all":
+        for locality in biggest_score[spatial_hieararchy].unique():
+            if locality not in listOfLocalities:
+                biggest_score = biggest_score.drop(biggest_score[biggest_score[spatial_hieararchy] == locality].index)
+
+    embeddings = modelSentenceTransformer.encode(biggest_score['terms'].to_list(), show_progress_bar=True)
+    return embeddings
+
+def similarity_intra_matrix_pairwise(matrix):
+    """
+    Compute pairwise cosine similarity on the rows of a Matrx
+    :param matrix:
+    :return: similarity
+    """
+    similarity = cosine_similarity(sparse.csr_matrix(matrix))
+    return similarity
+
+def similarity_inter_matrix(matrix1, matrix2):
+    """
+
+    :param matrix1:
+    :param matrix2:
+    :return:
+    """
+    similarity = 1 - sp.distance.cdist(matrix1, matrix2, 'cosine')
+    return similarity
 
 if __name__ == '__main__':
     # initialize a logger :
@@ -2073,65 +2142,70 @@ if __name__ == '__main__':
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
-    query = open(query_fname, "r").read()
-    logger.info("elasticsearch : start quering")
-    tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
-    logger.info("elasticsearch : stop quering")
-
-    # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
-    matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
-    logger.info("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-    logger.info("Build matrix of occurence : stop")
-
-    # TF-IDF adaptative
-    ## import matrixOccurence if you don't want to re-build it
-    """
-    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-    """
-    ### Filter city and period
-    """
-    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
-    tfidfStartDate = date(2020, 1, 23)
-    tfidfEndDate = date(2020, 1, 30)
-    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    """
-
-    ## Compute H-TFIDF
-    matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
-    biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
-    logger.info("H-TFIDF : start to compute")
-    HTFIDF(matrixOcc=matrixOccurence,
-           matrixHTFIDF_fname=matrixHTFIDF_fname,
-           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel='country',
-           temporalLevel='week',
-           )
-    logger.info("H-TFIDF : stop to compute")
-
-    ## Comparison with TF-IDF
-    ### On whole corpus
-    ### By Country
-    TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
-                               logger=logger,
-                               nb_biggest_terms=500,
-                               path_for_filesaved="elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country",
-                               spatial_hiearchy="country",
-                               temporal_period='all')
-
+    # query = open(query_fname, "r").read()
+    # logger.info("elasticsearch : start quering")
+    # tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
+    # logger.info("elasticsearch : stop quering")
+    #
+    # # Build a matrix of occurence for each terms in document aggregate by city and day
+    # matrixAggDay_fpath = "elasticsearch/analyse/nldb21/results/matrixAggDay.csv"
+    # matrixOccurence_fpath = "elasticsearch/analyse/nldb21/results/matrixOccurence.csv"
+    # logger.info("Build matrix of occurence : start")
+    # matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+    # logger.info("Build matrix of occurence : stop")
+    #
+    # # TF-IDF adaptative
+    # ## import matrixOccurence if you don't want to re-build it
+    # """
+    # # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    # """
+    # ### Filter city and period
+    # """
+    # listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
+    # tfidfStartDate = date(2020, 1, 23)
+    # tfidfEndDate = date(2020, 1, 30)
+    # tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
+    # """
+    #
+    # ## Compute H-TFIDF
+    # matrixHTFIDF_fname = "elasticsearch/analyse/nldb21/results/matrix_H-TFIDF.csv"
+    # biggestHTFIDFscore_fname = "elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv"
+    # logger.info("H-TFIDF : start to compute")
+    # HTFIDF(matrixOcc=matrixOccurence,
+    #        matrixHTFIDF_fname=matrixHTFIDF_fname,
+    #        biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+    #        spatialLevel='country',
+    #        temporalLevel='week',
+    #        )
+    # logger.info("H-TFIDF : stop to compute")
+    #
+    # ## Comparison with TF-IDF
+    # ### On whole corpus
+    # TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
+    #                          logger=logger,
+    #                          path_for_filesaved="elasticsearch/analyse/nldb21/results")
+    # ### By Country
+    # TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
+    #                            logger=logger,
+    #                            nb_biggest_terms=500,
+    #                            path_for_filesaved="elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country",
+    #                            spatial_hiearchy="country",
+    #                            temporal_period='all')
 
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
-    biggest_TFIDF = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+    biggest_TFIDF_country = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+    biggest_TFIDF_whole = pd.read_csv("elasticsearch/analyse/nldb21/results/TFIDF_BiggestScore_on_whole_corpus.csv")
     biggest_H_TFIDF = pd.read_csv('elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv', index_col=0)
-    t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
-                                       plotname="TF-IDF on corpus = Country",
-                                       paht2save="elasticsearch/analyse/nldb21/results/t-sne")
-    t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
-                                       plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
+    # # t_SNE visulation
+    # t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
+    #                                    plotname="TF-IDF on corpus by Country",
+    #                                    paht2save="elasticsearch/analyse/nldb21/results/t-sne")
+    # t_SNE_bert_embedding_visualization(biggest_H_TFIDF, logger, listOfLocalities=listOfLocalities,
+    #                                    plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
 
-    TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
-                             logger=logger,
-                             path_for_filesaved="elasticsearch/analyse/nldb21/results")
+    # Retrive embedding :
+    htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
+    tfidf_country = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
+    tfidf_whole = bert_embedding_filtred(biggest_TFIDF_whole)
 
     logger.info("H-TFIDF expirements stops")
