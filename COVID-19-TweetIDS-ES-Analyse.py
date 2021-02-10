@@ -2110,12 +2110,29 @@ def bert_embedding_filtred(biggest_score, listOfLocalities="all", spatial_hieara
 
 def similarity_intra_matrix_pairwise(matrix):
     """
-    Compute pairwise cosine similarity on the rows of a Matrx
+    Compute pairwise cosine similarity on the rows of a Matrix and retrieve unique score by pair.
+    indeed, cosine_similarity pairwise retrive a matrix with duplication : let's take an exemple :
+    Number of terms : 4, cosine similarity :
+            w1   w2  w3  w4
+            +---+---+----+--+
+        w1  | 1 |   |   |   |
+        w2  |   | 1 |   |   |
+        w3  |   |   | 1 |   |
+        w4  |   |   |   | 1 |
+            +---+---+----+--+
+
+        (w1, w2) = (w2, w1), so we have to keep only  : (number_of_terms)^2/2 - (number_of_terms)/2
+                                                        for nb_term = 4 :
+                                                        4*4/2 - 4/2 = 16/2 - 4/2 = 6 => we have 6 unique scores
+
     :param matrix:
-    :return: similarity
+    :return: list of unique similarity score
     """
     similarity = cosine_similarity(sparse.csr_matrix(matrix))
-    return similarity
+    similarity_1D = np.array([])
+    for i, row in enumerate(similarity):
+        similarity_1D = np.append(similarity_1D, row[i+1:]) # We remove duplicate pairwise value
+    return similarity_1D
 
 def similarity_inter_matrix(matrix1, matrix2):
     """
@@ -2203,9 +2220,20 @@ if __name__ == '__main__':
     # t_SNE_bert_embedding_visualization(biggest_H_TFIDF, logger, listOfLocalities=listOfLocalities,
     #                                    plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
 
-    # Retrive embedding :
+    # Retrieve embedding :
     htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
-    tfidf_country = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
-    tfidf_whole = bert_embedding_filtred(biggest_TFIDF_whole)
+    tfidf_country_embeddings = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
+    tfidf_whole_embeddings = bert_embedding_filtred(biggest_TFIDF_whole)
+    # Compute distance :
+    ## Distribution of similarities between terms extracted from a measure
+    htidf_similarity = similarity_intra_matrix_pairwise(htfidf_embeddings)
+    tfidf_country_similarity = similarity_intra_matrix_pairwise(tfidf_country_embeddings)
+    tfidf_whole_similarity = similarity_intra_matrix_pairwise(tfidf_whole_embeddings)
+
+    plt.boxplot(htidf_similarity)
+    plt.show()
+    ## Distribution of similarities between the terms of a country extracted from a measure
+    ## Distribution of similarities between sub-set terms by country compared by country pair
+    ## Distribution of similarities between the set of terms of 2 measures
 
     logger.info("H-TFIDF expirements stops")
