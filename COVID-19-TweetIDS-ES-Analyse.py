@@ -2224,13 +2224,28 @@ if __name__ == '__main__':
     htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
     tfidf_country_embeddings = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
     tfidf_whole_embeddings = bert_embedding_filtred(biggest_TFIDF_whole)
-    # Compute distance :
+    # Compute similarity :
     ## Distribution of similarities between terms extracted from a measure
     htidf_similarity = similarity_intra_matrix_pairwise(htfidf_embeddings)
     tfidf_country_similarity = similarity_intra_matrix_pairwise(tfidf_country_embeddings)
     tfidf_whole_similarity = similarity_intra_matrix_pairwise(tfidf_whole_embeddings)
 
+    plt.subplot(131)
     plt.boxplot(htidf_similarity)
+    plt.title("H-TFIDF")
+    plt.ylim(0,1)
+    plt.subplot(132)
+    plt.boxplot(tfidf_country_similarity)
+    plt.title("TFIDF with corpus by country")
+    plt.ylim(0, 1)
+    plt.subplot(133)
+    plt.boxplot(tfidf_whole_similarity)
+    plt.title("TFIDF on the whole corpus")
+    plt.ylim(0, 1)
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.3)
+    plt.suptitle("Distribution of similarity values among the extracted terms pairs of a measure")
+    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity-boxplot.png")
     plt.show()
     ## Distribution of similarities between the terms of a country extracted from a measure
     ## Distribution of similarities between sub-set terms by country compared by country pair
