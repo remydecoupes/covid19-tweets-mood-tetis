@@ -2245,10 +2245,32 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.subplots_adjust(wspace=0.3)
     plt.suptitle("Distribution of similarity values among the extracted terms pairs of a measure")
-    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity-boxplot.png")
+    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot.png")
     plt.show()
+    plt.close()
     ## Distribution of similarities between the terms of a country extracted from a measure
-    ## Distribution of similarities between sub-set terms by country compared by country pair
+    ### H-TFIDF
+    fig2, axs2 = plt.subplots(1, 5)
+    for i, country in enumerate(listOfLocalities):
+        axs2[i].boxplot(similarity_intra_matrix_pairwise(htfidf_embeddings[i*500:(i+1)*500-1]))
+        axs2[i].set_title(country)
+        axs2[i].set_ylim(0, 1)
+    fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
+    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_HTFIDF-country.png")
+    plt.show()
+    plt.close(fig2)
+    ### TF-IDF by corpus = country
+    fig3, axs3 = plt.subplots(1, 5)
+    for i, country in enumerate(listOfLocalities):
+        axs3[i].boxplot(similarity_intra_matrix_pairwise(tfidf_country_embeddings[i*500:(i+1)*500-1]))
+        axs3[i].set_title(country)
+        axs3[i].set_ylim(0, 1)
+    fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
+    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_TFIDF-country.png")
+    plt.show()
+    plt.close(fig3)
     ## Distribution of similarities between the set of terms of 2 measures
+    ## Distribution of similarities between sub-set terms by country compared by country pair
+
 
     logger.info("H-TFIDF expirements stops")
