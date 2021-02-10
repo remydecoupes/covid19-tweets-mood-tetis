@@ -2246,7 +2246,7 @@ if __name__ == '__main__':
     plt.subplots_adjust(wspace=0.3)
     plt.suptitle("Distribution of similarity values among the extracted terms pairs of a measure")
     plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot.png")
-    plt.show()
+    # plt.show()
     plt.close()
     ## Distribution of similarities between the terms of a country extracted from a measure
     ### H-TFIDF
@@ -2257,7 +2257,7 @@ if __name__ == '__main__':
         axs2[i].set_ylim(0, 1)
     fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
     plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_HTFIDF-country.png")
-    plt.show()
+    # plt.show()
     plt.close(fig2)
     ### TF-IDF by corpus = country
     fig3, axs3 = plt.subplots(1, 5)
@@ -2267,9 +2267,32 @@ if __name__ == '__main__':
         axs3[i].set_ylim(0, 1)
     fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
     plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_TFIDF-country.png")
-    plt.show()
+    # plt.show()
     plt.close(fig3)
     ## Distribution of similarities between the set of terms of 2 measures
+    ### H-TF-IDF with TF-IDF on whole corpus and TF-IDF country with TF-IDF on whole corpus
+    fig_compare_TFIDF_whole, ax4 = plt.subplots(1,2)
+    similarity_between_htfidf_tfidf_whole = similarity_inter_matrix(htfidf_embeddings, tfidf_whole_embeddings)
+    similarity_between_tfidfcountry_tfidf_whole = similarity_inter_matrix(tfidf_country_embeddings, tfidf_whole_embeddings)
+    similarity_between_htfidf_tfidf_whole_1D = np.array([])
+    similarity_between_tfidfcountry_tfidf_whole_1D = np.array([])
+    for i, row in enumerate(similarity_between_htfidf_tfidf_whole):
+        similarity_between_htfidf_tfidf_whole_1D = np.append(similarity_between_htfidf_tfidf_whole_1D, row[i+1:]) # We remove duplicate pairwise value
+    for i, row in enumerate(similarity_between_tfidfcountry_tfidf_whole):
+        similarity_between_tfidfcountry_tfidf_whole_1D = np.append(similarity_between_tfidfcountry_tfidf_whole_1D,
+                                                             row[i + 1:])
+    ax4[0].boxplot(similarity_between_htfidf_tfidf_whole_1D)
+    ax4[0].set_ylim(0, 1)
+    ax4[0].set_title("H-TFIDF")
+    ax4[1].boxplot(similarity_between_tfidfcountry_tfidf_whole_1D)
+    ax4[1].set_ylim(0, 1)
+    ax4[1].set_title("TFIDF on country")
+    fig_compare_TFIDF_whole.suptitle("Distribution of similarity betweent H-TFIDF and TF-IDF on whole corpus")
+    plt.savefig(
+        "elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_between_TFIDF-whole.png")
+    plt.show()
+    plt.close(fig_compare_TFIDF_whole)
+
     ## Distribution of similarities between sub-set terms by country compared by country pair
 
 
