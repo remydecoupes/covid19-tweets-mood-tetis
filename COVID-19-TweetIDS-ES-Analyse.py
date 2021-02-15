@@ -49,6 +49,9 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import sparse
 import scipy.spatial as sp
+# Spatial entity as descriptor :
+from geopy.geocoders import Nominatim
+from geopy.extra.rate_limiter import RateLimiter
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -2150,6 +2153,31 @@ def similarity_inter_matrix(matrix1, matrix2):
     similarity = 1 - sp.distance.cdist(matrix1, matrix2, 'cosine')
     return similarity
 
+def geocoding_token(biggest, listOfLocality, spatial_hieararchy):
+    """
+    Find and geocode Spatial entity with OSM data (nominatim)
+    Respect terms and use of OSM and Nomitim :
+        - Specify a name for the application, Ie.e user agent
+        - add delay between each query : min_delay_seconds = 1.
+            See : https://geopy.readthedocs.io/en/stable/#module-geopy.extra.rate_limiter
+        - define a time out for waiting nomatim answer : to 10 seconds
+    :param biggest:
+    :return: biggest with geocoding information
+    """
+    if listOfLocality != "all":
+        for locality in biggest[spatial_hieararchy].unique():
+            if locality not in listOfLocality:
+                biggest = biggest.drop(biggest[biggest[spatial_hieararchy] == locality].index)
+
+    geolocator = Nominatim(user_agent="h-tfidf-evaluation", timeout=10)
+    geocoder = RateLimiter(geolocator.geocode, min_delay_seconds=1)
+
+    tqdm.pandas()
+    biggest["geocode"] = biggest["terms"].progress_apply(geocoder)
+    return biggest
+
+
+
 if __name__ == '__main__':
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
@@ -2175,6 +2203,8 @@ if __name__ == '__main__':
 
     matrixAggDay_fpath = f_path_result+"/matrixAggDay.csv"
     matrixOccurence_fpath = f_path_result+"/matrixOccurence.csv"
+
+    """
     logger.info("Build matrix of occurence : start")
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
     logger.info("Build matrix of occurence : stop")
@@ -2216,6 +2246,7 @@ if __name__ == '__main__':
                                path_for_filesaved=f_path_result+"/tfidf-tf-corpus-country",
                                spatial_hiearchy="city",
                                temporal_period='all')
+    """
 
     """
 
@@ -2304,5 +2335,17 @@ if __name__ == '__main__':
     plt.close(fig_compare_TFIDF_whole)
     ## Distribution of similarities between sub-set terms by country compared by country pair
     """
+
+    spatial_level = "country"
+    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
+    biggest_TFIDF_country = pd.read_csv(
+        f_path_result+"/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus.csv", index_col=0)
+    biggest_TFIDF_whole = pd.read_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus.csv")
+    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
+    biggest_H_TFIDF_gepocode = geocoding_token(biggest_H_TFIDF,
+                                               listOfLocality=listOfLocalities,
+                                               spatial_hieararchy=spatial_level)
+    biggest_H_TFIDF_gepocode.to_csv(f_path_result+"/h-tfidf-Biggest-score-geocode.csv")
 
     logger.info("H-TFIDF expirements stops")
