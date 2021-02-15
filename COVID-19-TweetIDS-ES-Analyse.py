@@ -2153,7 +2153,7 @@ def similarity_inter_matrix(matrix1, matrix2):
     similarity = 1 - sp.distance.cdist(matrix1, matrix2, 'cosine')
     return similarity
 
-def geocoding_token(biggest, listOfLocality, spatial_hieararchy):
+def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
     """
     Find and geocode Spatial entity with OSM data (nominatim)
     Respect terms and use of OSM and Nomitim :
@@ -2164,10 +2164,13 @@ def geocoding_token(biggest, listOfLocality, spatial_hieararchy):
     :param biggest:
     :return: biggest with geocoding information
     """
-    if listOfLocality != "all":
-        for locality in biggest[spatial_hieararchy].unique():
-            if locality not in listOfLocality:
-                biggest = biggest.drop(biggest[biggest[spatial_hieararchy] == locality].index)
+    try:
+        if listOfLocality != "all":
+            for locality in biggest[spatial_hieararchy].unique():
+                if locality not in listOfLocality:
+                    biggest = biggest.drop(biggest[biggest[spatial_hieararchy] == locality].index)
+    except:
+        logger.info("could not filter, certainly because there is no spatial hiearchy on biggest score")
 
     geolocator = Nominatim(user_agent="h-tfidf-evaluation", timeout=10)
     geocoder = RateLimiter(geolocator.geocode, min_delay_seconds=1)
@@ -2192,6 +2195,7 @@ if __name__ == '__main__':
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
     #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
+    """
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
@@ -2204,7 +2208,7 @@ if __name__ == '__main__':
     matrixAggDay_fpath = f_path_result+"/matrixAggDay.csv"
     matrixOccurence_fpath = f_path_result+"/matrixOccurence.csv"
 
-    """
+    
     logger.info("Build matrix of occurence : start")
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
     logger.info("Build matrix of occurence : stop")
@@ -2345,7 +2349,18 @@ if __name__ == '__main__':
     biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
     biggest_H_TFIDF_gepocode = geocoding_token(biggest_H_TFIDF,
                                                listOfLocality=listOfLocalities,
-                                               spatial_hieararchy=spatial_level)
+                                               spatial_hieararchy=spatial_level,
+                                               logger=logger)
     biggest_H_TFIDF_gepocode.to_csv(f_path_result+"/h-tfidf-Biggest-score-geocode.csv")
+    biggest_TFIDF_country_gepocode = geocoding_token(biggest_TFIDF_country,
+                                               listOfLocality=listOfLocalities,
+                                               spatial_hieararchy=spatial_level,
+                                                     logger=logger)
+    biggest_TFIDF_country_gepocode.to_csv(f_path_result+"/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus_geocode.csv")
+    biggest_TFIDF_whole_gepocode = geocoding_token(biggest_TFIDF_whole,
+                                               listOfLocality=listOfLocalities,
+                                               spatial_hieararchy=spatial_level,
+                                                   logger=logger)
+    biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
 
     logger.info("H-TFIDF expirements stops")
