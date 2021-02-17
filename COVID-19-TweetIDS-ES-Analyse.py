@@ -4,8 +4,6 @@
 analyse Elasticsearch query
 """
 import json
-from time import sleep
-
 from elasticsearch import Elasticsearch
 from elasticsearch import logger as es_logger
 from collections import defaultdict, Counter
@@ -2184,11 +2182,16 @@ def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
 
 def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
     """
-    Remove terms from people flooding
+    /!\ under dev :
+    TODO :
+        - Take into account spatialLevel : Now, we only work with spatial level = Country
+    Remove terms from people flooding : return same dataframe with 1 more column : user_flooding
     :param biggest:
     :param logger:
-    :return:
+    :return: return same dataframe with 1 more column : user_flooding
     """
+    nb_of_tweets_flood_global = nb_of_tweets_flood
+    es_logger.setLevel(logging.WARNING)
     def is_an_user_flooding(term, locality):
         client = Elasticsearch("http://localhost:9200")
         index = "twitter"
@@ -2203,15 +2206,19 @@ def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
             user = hit["_source"]["user"]["name"]
             list_of_user.append(user)
         dict_user_nbtweet = dict(Counter(list_of_user))
-        d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood)
+        d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood_global)
         if len(d) > 0 : # there is a flood on this term:
             return 1
         else:
             return 0
 
-
-
-    logger.info("start remove terms if they coming from a flooding user, ie, terms in "+nb_of_tweets_flood+" tweets from an unique user")
+    logger.info("start remove terms if they coming from a flooding user, ie, terms in "+str(nb_of_tweets_flood)+" tweets from an unique user")
+    try:
+        tqdm.pandas()
+        biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
+    except:
+        logger.error("Elasticsearch deamon may not be launched")
+    return biggest
 
 
 
@@ -2227,7 +2234,7 @@ if __name__ == '__main__':
     except:
         exit(1)
     ## Spatial level hierarchie :
-    spatialLevel = 'state'
+    spatialLevel = 'country'
     ## Time level hierarchie :
     timeLevel = "week"
     ## elastic query :
@@ -2238,6 +2245,8 @@ if __name__ == '__main__':
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
+
+    """
     # start the query
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
@@ -2277,7 +2286,7 @@ if __name__ == '__main__':
                                path_for_filesaved=f_path_result+"/tfidf-tf-corpus-country",
                                spatial_hiearchy=spatialLevel,
                                temporal_period='all')
-
+    """
 
     """
 
@@ -2393,5 +2402,10 @@ if __name__ == '__main__':
                                                    logger=logger)
     biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
     """
+    # Post traitement : remove terms coming from user who flood
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
+    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
+    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
+    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
 
     logger.info("H-TFIDF expirements stops")
