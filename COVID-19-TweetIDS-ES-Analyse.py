@@ -8,8 +8,9 @@ from time import sleep
 
 from elasticsearch import Elasticsearch
 from elasticsearch import logger as es_logger
-from collections import defaultdict
+from collections import defaultdict, Counter
 import re
+import os
 from pathlib import Path
 from datetime import datetime, date
 # Preprocess terms for TF-IDF
@@ -946,8 +947,10 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
             continue
         ## matrixTFIDF
         TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
-        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality.replace("/", "_")+"_corpus.csv")
-        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality.replace("/", "_")+"_corpus.csv")
+        locality_format = locality.replace("/", "_")
+        locality_format = locality_format.replace(" ", "_")
+        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
+        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
         ## Extract N TOP ranking score
         extractBiggest = TFIDFClassical.max().nlargest(nb_biggest_terms)
         extractBiggest = extractBiggest.to_frame()
@@ -2179,52 +2182,76 @@ def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
     biggest["geocode"] = biggest["terms"].progress_apply(geocoder)
     return biggest
 
+def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
+    """
+    Remove terms from people flooding
+    :param biggest:
+    :param logger:
+    :return:
+    """
+    def is_an_user_flooding(term, locality):
+        client = Elasticsearch("http://localhost:9200")
+        index = "twitter"
+        nb_of_tweets_flood = 5
+        # Query :
+        ## Retrieve only user name where in full_text = term and rest_user_osm.country = locality
+        query = {"_source": "user.name","query":{"bool":{"filter":[{"bool":{"should":[{"match_phrase":{"full_text":term}}],"minimum_should_match":1}},
+                                                                   {"bool":{"should":[{"match_phrase":{"rest_user_osm.country":locality}}],"minimum_should_match":1}}]}}}
+        result = Elasticsearch.search(client, index=index, body=query, size=10000)
+        list_of_user = []
+        for hit in result["hits"]["hits"]:
+            user = hit["_source"]["user"]["name"]
+            list_of_user.append(user)
+        dict_user_nbtweet = dict(Counter(list_of_user))
+        d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood)
+        if len(d) > 0 : # there is a flood on this term:
+            return 1
+        else:
+            return 0
+
+
+
+    logger.info("start remove terms if they coming from a flooding user, ie, terms in "+nb_of_tweets_flood+" tweets from an unique user")
+
 
 
 if __name__ == '__main__':
+    # Global parameters :
+    ## Path to results :
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_state"
+    try:
+        if not os.path.exists(f_path_result):
+            os.makedirs(f_path_result)
+        if not os.path.exists(f_path_result+"/tfidf-tf-corpus-country"):
+            os.makedirs(f_path_result+"/tfidf-tf-corpus-country")
+    except:
+        exit(1)
+    ## Spatial level hierarchie :
+    spatialLevel = 'state'
+    ## Time level hierarchie :
+    timeLevel = "week"
+    ## elastic query :
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
+
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
-
-
-    # Comment below if you don't want to rebuild matrixOccurence
-    # Query Elastic Search : From now only on UK (see functions var below)
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_2020-02-01_08.txt"
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_midJanToMidFebruary.txt"
-    #query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
-    """
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
+    # start the query
     query = open(query_fname, "r").read()
     logger.info("elasticsearch : start quering")
     tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
     logger.info("elasticsearch : stop quering")
 
     # Build a matrix of occurence for each terms in document aggregate by city and day
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_city"
-
     matrixAggDay_fpath = f_path_result+"/matrixAggDay.csv"
     matrixOccurence_fpath = f_path_result+"/matrixOccurence.csv"
-
-    
     logger.info("Build matrix of occurence : start")
     matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
     logger.info("Build matrix of occurence : stop")
-
-    # TF-IDF adaptative
     ## import matrixOccurence if you don't want to re-build it
-    """
     # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-    """
-    ### Filter city and period
-    """
-    listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
-    tfidfStartDate = date(2020, 1, 23)
-    tfidfEndDate = date(2020, 1, 30)
-    tfidfPeriod = pd.date_range(tfidfStartDate, tfidfEndDate)
-    """
 
     ## Compute H-TFIDF
     matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
@@ -2233,8 +2260,8 @@ if __name__ == '__main__':
     HTFIDF(matrixOcc=matrixOccurence,
            matrixHTFIDF_fname=matrixHTFIDF_fname,
            biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel='city',
-           temporalLevel='week',
+           spatialLevel=spatialLevel,
+           temporalLevel=timeLevel,
            )
     logger.info("H-TFIDF : stop to compute")
 
@@ -2248,9 +2275,9 @@ if __name__ == '__main__':
                                logger=logger,
                                nb_biggest_terms=500,
                                path_for_filesaved=f_path_result+"/tfidf-tf-corpus-country",
-                               spatial_hiearchy="city",
+                               spatial_hiearchy=spatialLevel,
                                temporal_period='all')
-    """
+
 
     """
 
@@ -2340,6 +2367,9 @@ if __name__ == '__main__':
     ## Distribution of similarities between sub-set terms by country compared by country pair
     """
 
+    """
+    # Geocode terms :
+    ## Comments : over geocode even on non spatial entities
     spatial_level = "country"
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
@@ -2362,5 +2392,6 @@ if __name__ == '__main__':
                                                spatial_hieararchy=spatial_level,
                                                    logger=logger)
     biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
+    """
 
     logger.info("H-TFIDF expirements stops")
