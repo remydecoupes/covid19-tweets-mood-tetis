@@ -2236,6 +2236,23 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 
 
 if __name__ == '__main__':
+    # Workflow parameters :
+    ## Rebuild H-TFIDF (with Matrix Occurence)
+    build_htfidf = True
+    ## eval 1 : Comparison with classical TF-IDf
+    build_classical_tfidf = True
+    ## evla 2 : Use word_embedding with t-SNE
+    build_tsne = False
+    build_tsne_spatial_level = "country"
+    ## eval 3 : Use word_embedding with box plot to show disparity
+    build_boxplot = True
+    build_boxplot_spatial_level = "country"
+    ## post-traitement 1 : geocode term
+    build_posttraitement_geocode = False
+    ## post-trautement 2 : remove terms form a flooding user
+    build_posttraitement_flooding = True
+    build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
+
     # Global parameters :
     ## Path to results :
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb"
@@ -2243,6 +2260,8 @@ if __name__ == '__main__':
     spatialLevels = ['country', 'state', 'city']
     ## Time level hierarchie :
     timeLevel = "week"
+    ## List of country to work on :
+    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## elastic query :
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
 
@@ -2251,248 +2270,190 @@ if __name__ == '__main__':
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
-    # start the elastic query
-    query = open(query_fname, "r").read()
-    logger.debug("elasticsearch : start quering")
-    tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
-    logger.debug("elasticsearch : stop quering")
 
-    # Build a matrix of occurence for each terms in document aggregate by city and day
-    ## prepare tree for file in commun for all spatial level :
-    f_path_result_common = f_path_result+"_common"
-    if not os.path.exists(f_path_result_common):
-        os.makedirs(f_path_result_common)
-    ## Define file path
-    matrixAggDay_fpath = f_path_result_common + "/matrixAggDay.csv"
-    matrixOccurence_fpath = f_path_result_common + "/matrixOccurence.csv"
-    logger.debug("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-    logger.debug("Build matrix of occurence : stop")
-    ## import matrixOccurence if you don't want to re-build it
-    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+    if build_htfidf:
+        # start the elastic query
+        query = open(query_fname, "r").read()
+        logger.debug("elasticsearch : start quering")
+        tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
+        logger.debug("elasticsearch : stop quering")
 
-    for spatialLevel in spatialLevels:
-        logger.info("H-TFIDF on: "+spatialLevel)
-        f_path_result = f_path_result+"_"+spatialLevel
-        try:
-            if not os.path.exists(f_path_result):
-                os.makedirs(f_path_result)
-            if not os.path.exists(f_path_result + "/tfidf-tf-corpus-country"):
-                os.makedirs(f_path_result + "/tfidf-tf-corpus-country")
-        except:
-            exit(1)
-        ## Compute H-TFIDF
-        matrixHTFIDF_fname = f_path_result + "/matrix_H-TFIDF.csv"
-        biggestHTFIDFscore_fname = f_path_result + "/h-tfidf-Biggest-score.csv"
-        logger.debug("H-TFIDF : start to compute")
-        HTFIDF(matrixOcc=matrixOccurence,
-               matrixHTFIDF_fname=matrixHTFIDF_fname,
-               biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-               spatialLevel=spatialLevel,
-               temporalLevel=timeLevel,
-               )
-    logger.info("H-TFIDF : stop to compute for all spatial levels")
+        # Build a matrix of occurence for each terms in document aggregate by city and day
+        ## prepare tree for file in commun for all spatial level :
+        f_path_result_common = f_path_result+"/common"
+        if not os.path.exists(f_path_result_common):
+            os.makedirs(f_path_result_common)
+        ## Define file path
+        matrixAggDay_fpath = f_path_result_common + "/matrixAggDay.csv"
+        matrixOccurence_fpath = f_path_result_common + "/matrixOccurence.csv"
+        logger.debug("Build matrix of occurence : start")
+        matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+        logger.debug("Build matrix of occurence : stop")
+        ## import matrixOccurence if you don't want to re-build it
+        # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
 
-
-
-
-    """
-    # start the query
-    query = open(query_fname, "r").read()
-    logger.info("elasticsearch : start quering")
-    tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
-    logger.info("elasticsearch : stop quering")
-
-    # Build a matrix of occurence for each terms in document aggregate by city and day
-    matrixAggDay_fpath = f_path_result+"/matrixAggDay.csv"
-    matrixOccurence_fpath = f_path_result+"/matrixOccurence.csv"
-    logger.info("Build matrix of occurence : start")
-    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-    logger.info("Build matrix of occurence : stop")
-    ## import matrixOccurence if you don't want to re-build it
-    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-
-    ## Compute H-TFIDF
-    matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
-    biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
-    logger.info("H-TFIDF : start to compute")
-    HTFIDF(matrixOcc=matrixOccurence,
-           matrixHTFIDF_fname=matrixHTFIDF_fname,
-           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel=spatialLevel,
-           temporalLevel=timeLevel,
-           )
-    logger.info("H-TFIDF : stop to compute")
+        for spatialLevel in spatialLevels:
+            logger.info("H-TFIDF on: "+spatialLevel)
+            f_path_result_level = f_path_result+"/"+spatialLevel
+            if not os.path.exists(f_path_result_level):
+                os.makedirs(f_path_result_level)
+            ## Compute H-TFIDF
+            matrixHTFIDF_fname = f_path_result_level + "/matrix_H-TFIDF.csv"
+            biggestHTFIDFscore_fname = f_path_result_level + "/h-tfidf-Biggest-score.csv"
+            logger.debug("H-TFIDF : start to compute")
+            HTFIDF(matrixOcc=matrixOccurence,
+                   matrixHTFIDF_fname=matrixHTFIDF_fname,
+                   biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+                   spatialLevel=spatialLevel,
+                   temporalLevel=timeLevel,
+                   )
+        logger.info("H-TFIDF : stop to compute for all spatial levels")
 
     ## Comparison with TF-IDF
-    ### On whole corpus
-    TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
-                             logger=logger,
-                             path_for_filesaved=f_path_result)
-    ### By Country
-    TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
-                               logger=logger,
-                               nb_biggest_terms=500,
-                               path_for_filesaved=f_path_result+"/tfidf-tf-corpus-country",
-                               spatial_hiearchy=spatialLevel,
-                               temporal_period='all')
-    """
+    f_path_result_tfidf = f_path_result + "/tf-idf-classical"
+    f_path_result_tfidf_by_locality = f_path_result_tfidf + "/tfidf-tf-corpus-country"
+    if build_classical_tfidf :
+        if not os.path.exists(f_path_result_tfidf):
+            os.makedirs(f_path_result_tfidf)
+        if not os.path.exists(f_path_result_tfidf_by_locality):
+            os.makedirs(f_path_result_tfidf_by_locality)
+        ### On whole corpus
+        TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
+                                 logger=logger,
+                                 path_for_filesaved=f_path_result_tfidf)
+        ### By Country
+        TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
+                                   logger=logger,
+                                   nb_biggest_terms=500,
+                                   path_for_filesaved=f_path_result_tfidf_by_locality,
+                                   spatial_hiearchy="country",
+                                   temporal_period='all')
+    if build_tsne :
+        f_path_result_tsne = f_path_result+"/tsne"
+        biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+        biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"TFIDF_BiggestScore_on_whole_corpus.csv")
+        biggest_H_TFIDF = pd.read_csv(f_path_result+"/"+build_tsne_spatial_level+'/h-tfidf-Biggest-score.csv', index_col=0)
+        # t_SNE visulation
+        t_SNE_bert_embedding_visualization(biggest_TFIDF_country, logger, listOfLocalities=listOfLocalities,
+                                           plotname="TF-IDF on corpus by Country",
+                                           paht2save=f_path_result_tsne)
+        t_SNE_bert_embedding_visualization(biggest_H_TFIDF, logger, listOfLocalities=listOfLocalities,
+                                           plotname="H-TFIDF", paht2save=f_path_result_tsne)
 
-    """
+    if build_boxplot :
+        # dir path to save :
+        f_path_result_boxplot = f_path_result+"/pairwise-similarity-boxplot"
+        # open result from mesures :
+        biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+        biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"TFIDF_BiggestScore_on_whole_corpus.csv")
+        biggest_H_TFIDF = pd.read_csv(f_path_result+"/"+build_boxplot_spatial_level+'/h-tfidf-Biggest-score.csv', index_col=0)
+        # Retrieve embedding :
+        htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
+        tfidf_country_embeddings = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
+        tfidf_whole_embeddings = bert_embedding_filtred(biggest_TFIDF_whole)
+        # Compute similarity :
+        ## Distribution of similarities between terms extracted from a measure
+        htidf_similarity = similarity_intra_matrix_pairwise(htfidf_embeddings)
+        tfidf_country_similarity = similarity_intra_matrix_pairwise(tfidf_country_embeddings)
+        tfidf_whole_similarity = similarity_intra_matrix_pairwise(tfidf_whole_embeddings)
 
-    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
-    biggest_TFIDF_country = pd.read_csv("elasticsearch/analyse/nldb21/results/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
-    biggest_TFIDF_whole = pd.read_csv("elasticsearch/analyse/nldb21/results/TFIDF_BiggestScore_on_whole_corpus.csv")
-    biggest_H_TFIDF = pd.read_csv('elasticsearch/analyse/nldb21/results/h-tfidf-Biggest-score.csv', index_col=0)
-    # # t_SNE visulation
-    # t_SNE_bert_embedding_visualization(biggest_TFIDF, logger, listOfLocalities=listOfLocalities,
-    #                                    plotname="TF-IDF on corpus by Country",
-    #                                    paht2save="elasticsearch/analyse/nldb21/results/t-sne")
-    # t_SNE_bert_embedding_visualization(biggest_H_TFIDF, logger, listOfLocalities=listOfLocalities,
-    #                                    plotname="H-TFIDF", paht2save="elasticsearch/analyse/nldb21/results/t-sne")
+        plt.subplot(131)
+        plt.boxplot(htidf_similarity)
+        plt.title("H-TFIDF")
+        plt.ylim(0,1)
+        plt.subplot(132)
+        plt.boxplot(tfidf_country_similarity)
+        plt.title("TFIDF with corpus by country")
+        plt.ylim(0, 1)
+        plt.subplot(133)
+        plt.boxplot(tfidf_whole_similarity)
+        plt.title("TFIDF on the whole corpus")
+        plt.ylim(0, 1)
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0.3)
+        plt.suptitle("Distribution of similarity values among the extracted terms pairs of a measure")
+        plt.savefig(f_path_result_boxplot+"/pairwise-similarity-boxplot.png")
+        # plt.show()
+        plt.close()
+        ## Distribution of similarities between the terms of a country extracted from a measure
+        ### H-TFIDF
+        fig2, axs2 = plt.subplots(1, 5)
+        for i, country in enumerate(listOfLocalities):
+            axs2[i].boxplot(similarity_intra_matrix_pairwise(htfidf_embeddings[i*500:(i+1)*500-1]))
+            axs2[i].set_title(country)
+            axs2[i].set_ylim(0, 1)
+        fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
+        plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_HTFIDF-country.png")
+        # plt.show()
+        plt.close(fig2)
+        ### TF-IDF by corpus = country
+        fig3, axs3 = plt.subplots(1, 5)
+        for i, country in enumerate(listOfLocalities):
+            axs3[i].boxplot(similarity_intra_matrix_pairwise(tfidf_country_embeddings[i*500:(i+1)*500-1]))
+            axs3[i].set_title(country)
+            axs3[i].set_ylim(0, 1)
+        fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
+        plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_TFIDF-country.png")
+        # plt.show()
+        plt.close(fig3)
+        ## Distribution of similarities between the set of terms of 2 measures
+        ### H-TF-IDF with TF-IDF on whole corpus and TF-IDF country with TF-IDF on whole corpus
+        fig_compare_TFIDF_whole, ax4 = plt.subplots(1,2)
+        similarity_between_htfidf_tfidf_whole = similarity_inter_matrix(htfidf_embeddings, tfidf_whole_embeddings)
+        similarity_between_tfidfcountry_tfidf_whole = similarity_inter_matrix(tfidf_country_embeddings, tfidf_whole_embeddings)
+        similarity_between_htfidf_tfidf_whole_1D = np.array([])
+        similarity_between_tfidfcountry_tfidf_whole_1D = np.array([])
+        for i, row in enumerate(similarity_between_htfidf_tfidf_whole):
+            similarity_between_htfidf_tfidf_whole_1D = np.append(similarity_between_htfidf_tfidf_whole_1D, row[i+1:]) # We remove duplicate pairwise value
+        for i, row in enumerate(similarity_between_tfidfcountry_tfidf_whole):
+            similarity_between_tfidfcountry_tfidf_whole_1D = np.append(similarity_between_tfidfcountry_tfidf_whole_1D,
+                                                                 row[i + 1:])
+        ax4[0].boxplot(similarity_between_htfidf_tfidf_whole_1D)
+        ax4[0].set_ylim(0, 1)
+        ax4[0].set_title("H-TFIDF")
+        ax4[1].boxplot(similarity_between_tfidfcountry_tfidf_whole_1D)
+        ax4[1].set_ylim(0, 1)
+        ax4[1].set_title("TFIDF on country")
+        fig_compare_TFIDF_whole.suptitle("Distribution of similarity between H-TFIDF and TF-IDF on whole corpus")
+        plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_between_TFIDF-whole.png")
+        plt.show()
+        plt.close(fig_compare_TFIDF_whole)
+        ## Distribution of similarities between sub-set terms by country compared by country pair
 
-    # Retrieve embedding :
-    htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
-    tfidf_country_embeddings = bert_embedding_filtred(biggest_TFIDF_country, listOfLocalities=listOfLocalities)
-    tfidf_whole_embeddings = bert_embedding_filtred(biggest_TFIDF_whole)
-    # Compute similarity :
-    ## Distribution of similarities between terms extracted from a measure
-    htidf_similarity = similarity_intra_matrix_pairwise(htfidf_embeddings)
-    tfidf_country_similarity = similarity_intra_matrix_pairwise(tfidf_country_embeddings)
-    tfidf_whole_similarity = similarity_intra_matrix_pairwise(tfidf_whole_embeddings)
-
-    plt.subplot(131)
-    plt.boxplot(htidf_similarity)
-    plt.title("H-TFIDF")
-    plt.ylim(0,1)
-    plt.subplot(132)
-    plt.boxplot(tfidf_country_similarity)
-    plt.title("TFIDF with corpus by country")
-    plt.ylim(0, 1)
-    plt.subplot(133)
-    plt.boxplot(tfidf_whole_similarity)
-    plt.title("TFIDF on the whole corpus")
-    plt.ylim(0, 1)
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0.3)
-    plt.suptitle("Distribution of similarity values among the extracted terms pairs of a measure")
-    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot.png")
-    # plt.show()
-    plt.close()
-    ## Distribution of similarities between the terms of a country extracted from a measure
-    ### H-TFIDF
-    fig2, axs2 = plt.subplots(1, 5)
-    for i, country in enumerate(listOfLocalities):
-        axs2[i].boxplot(similarity_intra_matrix_pairwise(htfidf_embeddings[i*500:(i+1)*500-1]))
-        axs2[i].set_title(country)
-        axs2[i].set_ylim(0, 1)
-    fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
-    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_HTFIDF-country.png")
-    # plt.show()
-    plt.close(fig2)
-    ### TF-IDF by corpus = country
-    fig3, axs3 = plt.subplots(1, 5)
-    for i, country in enumerate(listOfLocalities):
-        axs3[i].boxplot(similarity_intra_matrix_pairwise(tfidf_country_embeddings[i*500:(i+1)*500-1]))
-        axs3[i].set_title(country)
-        axs3[i].set_ylim(0, 1)
-    fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
-    plt.savefig("elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_TFIDF-country.png")
-    # plt.show()
-    plt.close(fig3)
-    ## Distribution of similarities between the set of terms of 2 measures
-    ### H-TF-IDF with TF-IDF on whole corpus and TF-IDF country with TF-IDF on whole corpus
-    fig_compare_TFIDF_whole, ax4 = plt.subplots(1,2)
-    similarity_between_htfidf_tfidf_whole = similarity_inter_matrix(htfidf_embeddings, tfidf_whole_embeddings)
-    similarity_between_tfidfcountry_tfidf_whole = similarity_inter_matrix(tfidf_country_embeddings, tfidf_whole_embeddings)
-    similarity_between_htfidf_tfidf_whole_1D = np.array([])
-    similarity_between_tfidfcountry_tfidf_whole_1D = np.array([])
-    for i, row in enumerate(similarity_between_htfidf_tfidf_whole):
-        similarity_between_htfidf_tfidf_whole_1D = np.append(similarity_between_htfidf_tfidf_whole_1D, row[i+1:]) # We remove duplicate pairwise value
-    for i, row in enumerate(similarity_between_tfidfcountry_tfidf_whole):
-        similarity_between_tfidfcountry_tfidf_whole_1D = np.append(similarity_between_tfidfcountry_tfidf_whole_1D,
-                                                             row[i + 1:])
-    ax4[0].boxplot(similarity_between_htfidf_tfidf_whole_1D)
-    ax4[0].set_ylim(0, 1)
-    ax4[0].set_title("H-TFIDF")
-    ax4[1].boxplot(similarity_between_tfidfcountry_tfidf_whole_1D)
-    ax4[1].set_ylim(0, 1)
-    ax4[1].set_title("TFIDF on country")
-    fig_compare_TFIDF_whole.suptitle("Distribution of similarity betweent H-TFIDF and TF-IDF on whole corpus")
-    plt.savefig(
-        "elasticsearch/analyse/nldb21/results/pairwise-similarity/pairwise-similarity-boxplot_between_TFIDF-whole.png")
-    plt.show()
-    plt.close(fig_compare_TFIDF_whole)
-    ## Distribution of similarities between sub-set terms by country compared by country pair
-    """
-
-    """
-    # Geocode terms :
-    ## Comments : over geocode even on non spatial entities
-    spatial_level = "country"
-    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
-    biggest_TFIDF_country = pd.read_csv(
-        f_path_result+"/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus.csv", index_col=0)
-    biggest_TFIDF_whole = pd.read_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus.csv")
-    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
-    biggest_H_TFIDF_gepocode = geocoding_token(biggest_H_TFIDF,
-                                               listOfLocality=listOfLocalities,
-                                               spatial_hieararchy=spatial_level,
-                                               logger=logger)
-    biggest_H_TFIDF_gepocode.to_csv(f_path_result+"/h-tfidf-Biggest-score-geocode.csv")
-    biggest_TFIDF_country_gepocode = geocoding_token(biggest_TFIDF_country,
-                                               listOfLocality=listOfLocalities,
-                                               spatial_hieararchy=spatial_level,
-                                                     logger=logger)
-    biggest_TFIDF_country_gepocode.to_csv(f_path_result+"/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus_geocode.csv")
-    biggest_TFIDF_whole_gepocode = geocoding_token(biggest_TFIDF_whole,
-                                               listOfLocality=listOfLocalities,
-                                               spatial_hieararchy=spatial_level,
+    if build_posttraitement_geocode:
+        # Geocode terms :
+        ## Comments : over geocode even on non spatial entities
+        spatial_level = "country"
+        listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+        f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
+        biggest_TFIDF_country = pd.read_csv(
+            f_path_result+"/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus.csv", index_col=0)
+        biggest_TFIDF_whole = pd.read_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus.csv")
+        biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
+        biggest_H_TFIDF_gepocode = geocoding_token(biggest_H_TFIDF,
+                                                   listOfLocality=listOfLocalities,
+                                                   spatial_hieararchy=spatial_level,
                                                    logger=logger)
-    biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
-    """
+        biggest_H_TFIDF_gepocode.to_csv(f_path_result+"/h-tfidf-Biggest-score-geocode.csv")
+        biggest_TFIDF_country_gepocode = geocoding_token(biggest_TFIDF_country,
+                                                   listOfLocality=listOfLocalities,
+                                                   spatial_hieararchy=spatial_level,
+                                                         logger=logger)
+        biggest_TFIDF_country_gepocode.to_csv(f_path_result+"/TF-IDF_BiggestScore_on_"+spatial_level+"_corpus_geocode.csv")
+        biggest_TFIDF_whole_gepocode = geocoding_token(biggest_TFIDF_whole,
+                                                   listOfLocality=listOfLocalities,
+                                                   spatial_hieararchy=spatial_level,
+                                                       logger=logger)
+        biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
 
 
-    # Post traitement : remove terms coming from user who flood
-    """
-    logger.info("post-traitement on: "+spatialLevel)
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
-    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
-    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
-    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
-
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_state"
-    spatialLevel = 'state'
-    matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
-    biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
-    # matrixOccurence = pd.read_csv(f_path_result+"/matrixOccurence.csv", index_col=0)
-    HTFIDF(matrixOcc=matrixOccurence,
-           matrixHTFIDF_fname=matrixHTFIDF_fname,
-           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel=spatialLevel,
-           temporalLevel=timeLevel,
-           )
-    logger.info("post-traitement on: " + spatialLevel)
-    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
-    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
-    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
-
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_city"
-    spatialLevel = 'city'
-    matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
-    biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
-    # matrixOccurence = pd.read_csv(f_path_result + "/matrixOccurence.csv", index_col=0)
-    HTFIDF(matrixOcc=matrixOccurence,
-           matrixHTFIDF_fname=matrixHTFIDF_fname,
-           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
-           spatialLevel=spatialLevel,
-           temporalLevel=timeLevel,
-           )
-    logger.info("post-traitement on: " + spatialLevel)
-    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
-    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
-    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
-    """
+    if build_posttraitement_flooding:
+        # Post traitement : remove terms coming from user who flood
+        for spatial_level_flood in build_posttraitement_flooding_spatial_levels:
+            logger.info("post-traitement flooding on: " + spatialLevel)
+            f_path_result_flood = f_path_result + spatialLevel
+            biggest_H_TFIDF = pd.read_csv(f_path_result_flood + '/h-tfidf-Biggest-score.csv', index_col=0)
+            biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF, logger, spatialLevel=spatialLevel)
+            biggest_H_TFIDF_with_flood.to_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv")
 
     logger.info("H-TFIDF expirements stops")
