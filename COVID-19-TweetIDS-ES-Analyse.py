@@ -489,8 +489,12 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0, top_n))
     for row in matrixTFIDF.index:
         try:
-            row = row[row > 0]# we remove term with a score = 0
-            extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
+            row_without_zero =  matrixTFIDF.loc[row]# we remove term with a score = 0
+            row_without_zero = row_without_zero[ row_without_zero !=0 ]
+            try:
+                extractBiggest.loc[row] = row_without_zero.nlargest(top_n).keys()
+            except:
+                extractBiggest.loc[row] = row_without_zero.nlargest(len(row_without_zero)).keys()
         except:
             logger.info("H-TFIDF: city "+str(matrixTFIDF.loc[row].name)+ "not enough terms")
     extractBiggest.to_csv(biggestHTFIDFscore_fname+".old.csv")
@@ -2231,7 +2235,7 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
     logger.debug("start remove terms if they coming from a flooding user, ie, terms in "+str(ratio_of_flood_global*100)+"% of tweets from an unique user over tweets with this words")
     tqdm.pandas()
     biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
-    return biggest
+    return biggestr
 
 
 
