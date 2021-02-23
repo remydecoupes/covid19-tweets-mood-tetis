@@ -2251,6 +2251,26 @@ if __name__ == '__main__':
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
 
+    # start the elastic query
+    query = open(query_fname, "r").read()
+    logger.debug("elasticsearch : start quering")
+    tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
+    logger.debug("elasticsearch : stop quering")
+
+    # Build a matrix of occurence for each terms in document aggregate by city and day
+    ## prepare tree for file in commun for all spatial level :
+    f_path_result_common = f_path_result+"_common"
+    if not os.path.exists(f_path_result_common):
+        os.makedirs(f_path_result_common)
+    ## Define file path
+    matrixAggDay_fpath = f_path_result_common + "/matrixAggDay.csv"
+    matrixOccurence_fpath = f_path_result_common + "/matrixOccurence.csv"
+    logger.debug("Build matrix of occurence : start")
+    matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+    logger.debug("Build matrix of occurence : stop")
+    ## import matrixOccurence if you don't want to re-build it
+    # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+
     for spatialLevel in spatialLevels:
         logger.info("H-TFIDF on: "+spatialLevel)
         f_path_result = f_path_result+"_"+spatialLevel
@@ -2261,22 +2281,6 @@ if __name__ == '__main__':
                 os.makedirs(f_path_result + "/tfidf-tf-corpus-country")
         except:
             exit(1)
-
-        # start the query
-        query = open(query_fname, "r").read()
-        logger.debug("elasticsearch : start quering")
-        tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
-        logger.debug("elasticsearch : stop quering")
-
-        # Build a matrix of occurence for each terms in document aggregate by city and day
-        matrixAggDay_fpath = f_path_result + "/matrixAggDay.csv"
-        matrixOccurence_fpath = f_path_result + "/matrixOccurence.csv"
-        logger.debug("Build matrix of occurence : start")
-        matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
-        logger.debug("Build matrix of occurence : stop")
-        ## import matrixOccurence if you don't want to re-build it
-        # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
-
         ## Compute H-TFIDF
         matrixHTFIDF_fname = f_path_result + "/matrix_H-TFIDF.csv"
         biggestHTFIDFscore_fname = f_path_result + "/h-tfidf-Biggest-score.csv"
@@ -2462,7 +2466,7 @@ if __name__ == '__main__':
     spatialLevel = 'state'
     matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
     biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
-    matrixOccurence = pd.read_csv(f_path_result+"/matrixOccurence.csv", index_col=0)
+    # matrixOccurence = pd.read_csv(f_path_result+"/matrixOccurence.csv", index_col=0)
     HTFIDF(matrixOcc=matrixOccurence,
            matrixHTFIDF_fname=matrixHTFIDF_fname,
            biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
@@ -2478,7 +2482,7 @@ if __name__ == '__main__':
     spatialLevel = 'city'
     matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
     biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
-    matrixOccurence = pd.read_csv(f_path_result + "/matrixOccurence.csv", index_col=0)
+    # matrixOccurence = pd.read_csv(f_path_result + "/matrixOccurence.csv", index_col=0)
     HTFIDF(matrixOcc=matrixOccurence,
            matrixHTFIDF_fname=matrixHTFIDF_fname,
            biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
