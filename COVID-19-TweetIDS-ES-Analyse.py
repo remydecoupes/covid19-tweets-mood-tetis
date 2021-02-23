@@ -2182,9 +2182,6 @@ def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
 
 def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
     """
-    /!\ under dev :
-    TODO :
-        - Take into account spatialLevel : Now, we only work with spatial level = Country
     Remove terms from people flooding : return same dataframe with 1 more column : user_flooding
     :param biggest:
     :param logger:
@@ -2192,32 +2189,42 @@ def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
     """
     nb_of_tweets_flood_global = nb_of_tweets_flood
     es_logger.setLevel(logging.WARNING)
+
+    # pre-build elastic query for spatialLevel :
+    rest_user_osm_level = ""
+    if spatialLevel == "country":
+        rest_user_osm_level = "rest_user_osm.country"
+    elif spatialLevel == "state":
+        rest_user_osm_level == "rest.features.properties.state"
+    elif spatialLevel == "city":
+        rest_user_osm_level == "rest.features.properties.city"
+
     def is_an_user_flooding(term, locality):
         client = Elasticsearch("http://localhost:9200")
         index = "twitter"
-        nb_of_tweets_flood = 5
         # Query :
         ## Retrieve only user name where in full_text = term and rest_user_osm.country = locality
         query = {"_source": "user.name","query":{"bool":{"filter":[{"bool":{"should":[{"match_phrase":{"full_text":term}}],"minimum_should_match":1}},
-                                                                   {"bool":{"should":[{"match_phrase":{"rest_user_osm.country":locality}}],"minimum_should_match":1}}]}}}
-        result = Elasticsearch.search(client, index=index, body=query, size=10000)
-        list_of_user = []
-        for hit in result["hits"]["hits"]:
-            user = hit["_source"]["user"]["name"]
-            list_of_user.append(user)
-        dict_user_nbtweet = dict(Counter(list_of_user))
-        d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood_global)
-        if len(d) > 0 : # there is a flood on this term:
-            return 1
-        else:
+                                                                   {"bool":{"should":[{"match_phrase":{rest_user_osm_level:locality}}],"minimum_should_match":1}}]}}}
+        try:
+            result = Elasticsearch.search(client, index=index, body=query)
+            list_of_user = []
+            for hit in result["hits"]["hits"]:
+                user = hit["_source"]["user"]["name"]
+                list_of_user.append(user)
+            dict_user_nbtweet = dict(Counter(list_of_user))
+            d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood_global)
+            if len(d) > 0 : # there is a flood on this term:
+                return 1
+            else:
+                return 0
+        except:
+            logger.error("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
             return 0
 
     logger.info("start remove terms if they coming from a flooding user, ie, terms in "+str(nb_of_tweets_flood)+" tweets from an unique user")
-    try:
-        tqdm.pandas()
-        biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
-    except:
-        logger.error("Elasticsearch deamon may not be launched")
+    tqdm.pandas()
+    biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
     return biggest
 
 
