@@ -2214,22 +2214,25 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
         index = "twitter"
         # Query :
         ## Retrieve only user name where in full_text = term and rest_user_osm.country = locality
-        query = {"_source": "user.name","query":{"bool":{"filter":[{"bool":{"should":[{"match_phrase":{"full_text":term}}],"minimum_should_match":1}},
-                                                                   {"bool":{"should":[{"match_phrase":{rest_user_osm_level:locality}}],"minimum_should_match":1}}]}}}
-        try:
-            result = Elasticsearch.search(client, index=index, body=query)
-            list_of_user = []
-            for hit in result["hits"]["hits"]:
-                user = hit["_source"]["user"]["name"]
-                list_of_user.append(user)
-            dict_user_nbtweet = dict(Counter(list_of_user))
-            d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= (ratio_of_flood_global * len(list_of_user)))
-            if len(d) > 0 : # there is a flood on this term:
-                return 1
-            else:
+        if term is not np.NAN:
+            query = {"_source": "user.name","query":{"bool":{"filter":[{"bool":{"should":[{"match_phrase":{"full_text":term}}],"minimum_should_match":1}},
+                                                                       {"bool":{"should":[{"match_phrase":{rest_user_osm_level:locality}}],"minimum_should_match":1}}]}}}
+            try:
+                result = Elasticsearch.search(client, index=index, body=query)
+                list_of_user = []
+                for hit in result["hits"]["hits"]:
+                    user = hit["_source"]["user"]["name"]
+                    list_of_user.append(user)
+                dict_user_nbtweet = dict(Counter(list_of_user))
+                d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= (ratio_of_flood_global * len(list_of_user)))
+                if len(d) > 0 : # there is a flood on this term:
+                    return 1
+                else:
+                    return 0
+            except:
+                logger.debug("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
                 return 0
-        except:
-            logger.debug("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
+        else:
             return 0
 
     logger.debug("start remove terms if they coming from a flooding user, ie, terms in "+str(ratio_of_flood_global*100)+"% of tweets from an unique user over tweets with this words")
@@ -2347,6 +2350,8 @@ if __name__ == '__main__':
     if build_boxplot :
         # dir path to save :
         f_path_result_boxplot = f_path_result+"/pairwise-similarity-boxplot"
+        if not os.path.exists(f_path_result_boxplot):
+            os.makedirs(f_path_result_boxplot)
         # open result from mesures :
         biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
         biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"/TFIDF_BiggestScore_on_whole_corpus.csv")
@@ -2420,7 +2425,7 @@ if __name__ == '__main__':
         ax4[1].set_title("TFIDF on country")
         fig_compare_TFIDF_whole.suptitle("Distribution of similarity between H-TFIDF and TF-IDF on whole corpus")
         plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_between_TFIDF-whole.png")
-        plt.show()
+        # plt.show()
         plt.close(fig_compare_TFIDF_whole)
         ## Distribution of similarities between sub-set terms by country compared by country pair
 
@@ -2455,7 +2460,7 @@ if __name__ == '__main__':
         # Post traitement : remove terms coming from user who flood
         for spatial_level_flood in build_posttraitement_flooding_spatial_levels:
             logger.info("post-traitement flooding on: " + spatialLevel)
-            f_path_result_flood = f_path_result + spatialLevel
+            f_path_result_flood = f_path_result + "/" + spatialLevel
             biggest_H_TFIDF = pd.read_csv(f_path_result_flood + '/h-tfidf-Biggest-score.csv', index_col=0)
             biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF, logger, spatialLevel=spatialLevel)
             biggest_H_TFIDF_with_flood.to_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv")
