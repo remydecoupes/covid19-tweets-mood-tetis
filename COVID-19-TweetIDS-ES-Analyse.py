@@ -2348,8 +2348,8 @@ if __name__ == '__main__':
         # dir path to save :
         f_path_result_boxplot = f_path_result+"/pairwise-similarity-boxplot"
         # open result from mesures :
-        biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
-        biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"TFIDF_BiggestScore_on_whole_corpus.csv")
+        biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+        biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"/TFIDF_BiggestScore_on_whole_corpus.csv")
         biggest_H_TFIDF = pd.read_csv(f_path_result+"/"+build_boxplot_spatial_level+'/h-tfidf-Biggest-score.csv', index_col=0)
         # Retrieve embedding :
         htfidf_embeddings = bert_embedding_filtred(biggest_H_TFIDF, listOfLocalities=listOfLocalities)
