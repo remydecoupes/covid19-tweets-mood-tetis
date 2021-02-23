@@ -303,8 +303,23 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
+    def bigrams_per_line(doc):
+        """
+        Overload analyzer for Sklearn TF-IDFVectorizer and CountVectorizer
+        See : https://stackoverflow.com/questions/26907309/create-ngrams-only-for-words-on-the-same-line-disregarding-line-breaks-with-sc
+
+        The problem was the vocabulary has bigram formed with last word of precedent tweet with 1rst word of the followinf tweet
+        :param doc:
+        :return:
+        """
+        for ln in doc.split('\n'):
+            terms = re.findall(r'\w{2,}', ln)
+            for bigram in zip(terms, terms[1:]):
+                yield '%s %s' % bigram
+
     cd = CountVectorizer(
         stop_words='english',
+        analyzer=bigrams_per_line,
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         min_df=2, # token at least present in 2 cities : reduce size of matrix
         ngram_range=(1,2),
@@ -489,6 +504,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     extractBiggest = pd.DataFrame(index=matrixTFIDF.index, columns=range(0, top_n))
     for row in matrixTFIDF.index:
         try:
+            row = row[row > 0]# we remove term with a score = 0
             extractBiggest.loc[row] = matrixTFIDF.loc[row].nlargest(top_n).keys()
         except:
             logger.info("H-TFIDF: city "+str(matrixTFIDF.loc[row].name)+ "not enough terms")
@@ -2237,16 +2253,9 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 if __name__ == '__main__':
     # Global parameters :
     ## Path to results :
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_state"
-    try:
-        if not os.path.exists(f_path_result):
-            os.makedirs(f_path_result)
-        if not os.path.exists(f_path_result+"/tfidf-tf-corpus-country"):
-            os.makedirs(f_path_result+"/tfidf-tf-corpus-country")
-    except:
-        exit(1)
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb"
     ## Spatial level hierarchie :
-    spatialLevel = 'country'
+    spatialLevels = ['city', 'state', 'country']
     ## Time level hierarchie :
     timeLevel = "week"
     ## elastic query :
@@ -2256,6 +2265,46 @@ if __name__ == '__main__':
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
     logger = logsetup(log_fname)
     logger.info("H-TFIDF expirements starts")
+
+    for spatialLevel in spatialLevels:
+        logger.info("H-TFIDF on: "+spatialLevel)
+        f_path_result = f_path_result+"_"+spatialLevel
+        try:
+            if not os.path.exists(f_path_result):
+                os.makedirs(f_path_result)
+            if not os.path.exists(f_path_result + "/tfidf-tf-corpus-country"):
+                os.makedirs(f_path_result + "/tfidf-tf-corpus-country")
+        except:
+            exit(1)
+
+        # start the query
+        query = open(query_fname, "r").read()
+        logger.debug("elasticsearch : start quering")
+        tweetsByCityAndDate = elasticsearchQuery(query_fname, logger)
+        logger.debug("elasticsearch : stop quering")
+
+        # Build a matrix of occurence for each terms in document aggregate by city and day
+        matrixAggDay_fpath = f_path_result + "/matrixAggDay.csv"
+        matrixOccurence_fpath = f_path_result + "/matrixOccurence.csv"
+        logger.debug("Build matrix of occurence : start")
+        matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+        logger.debug("Build matrix of occurence : stop")
+        ## import matrixOccurence if you don't want to re-build it
+        # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
+
+        ## Compute H-TFIDF
+        matrixHTFIDF_fname = f_path_result + "/matrix_H-TFIDF.csv"
+        biggestHTFIDFscore_fname = f_path_result + "/h-tfidf-Biggest-score.csv"
+        logger.debug("H-TFIDF : start to compute")
+        HTFIDF(matrixOcc=matrixOccurence,
+               matrixHTFIDF_fname=matrixHTFIDF_fname,
+               biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+               spatialLevel=spatialLevel,
+               temporalLevel=timeLevel,
+               )
+    logger.info("H-TFIDF : stop to compute for all spatial levels")
+
+
 
 
     """
@@ -2414,7 +2463,10 @@ if __name__ == '__main__':
                                                    logger=logger)
     biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
     """
+
+
     # Post traitement : remove terms coming from user who flood
+    """
     logger.info("post-traitement on: "+spatialLevel)
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
     biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
@@ -2423,6 +2475,15 @@ if __name__ == '__main__':
 
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_state"
     spatialLevel = 'state'
+    matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
+    biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
+    matrixOccurence = pd.read_csv(f_path_result+"/matrixOccurence.csv", index_col=0)
+    HTFIDF(matrixOcc=matrixOccurence,
+           matrixHTFIDF_fname=matrixHTFIDF_fname,
+           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+           spatialLevel=spatialLevel,
+           temporalLevel=timeLevel,
+           )
     logger.info("post-traitement on: " + spatialLevel)
     biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
     biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
@@ -2430,9 +2491,19 @@ if __name__ == '__main__':
 
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_city"
     spatialLevel = 'city'
+    matrixHTFIDF_fname = f_path_result+"/matrix_H-TFIDF.csv"
+    biggestHTFIDFscore_fname = f_path_result+"/h-tfidf-Biggest-score.csv"
+    matrixOccurence = pd.read_csv(f_path_result + "/matrixOccurence.csv", index_col=0)
+    HTFIDF(matrixOcc=matrixOccurence,
+           matrixHTFIDF_fname=matrixHTFIDF_fname,
+           biggestHTFIDFscore_fname=biggestHTFIDFscore_fname,
+           spatialLevel=spatialLevel,
+           temporalLevel=timeLevel,
+           )
     logger.info("post-traitement on: " + spatialLevel)
     biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
     biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
     biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
+    """
 
     logger.info("H-TFIDF expirements stops")
