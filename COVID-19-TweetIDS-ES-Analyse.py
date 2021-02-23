@@ -2180,14 +2180,19 @@ def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
     biggest["geocode"] = biggest["terms"].progress_apply(geocoder)
     return biggest
 
-def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
+def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
     """
     Remove terms from people flooding : return same dataframe with 1 more column : user_flooding
-    :param biggest:
+    With default ratio_of_flood : If an twitter.user use a term in more than 50% of occurence of this terms,
+       we consider this user is flooding
+
+    :param biggest: File of terms to process
     :param logger:
+    :param: spatialLevel : work on Country / State / City
+    :param: ratio_of_flood
     :return: return same dataframe with 1 more column : user_flooding
     """
-    nb_of_tweets_flood_global = nb_of_tweets_flood
+    ratio_of_flood_global = ratio_of_flood
     es_logger.setLevel(logging.WARNING)
 
     # pre-build elastic query for spatialLevel :
@@ -2195,9 +2200,9 @@ def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
     if spatialLevel == "country":
         rest_user_osm_level = "rest_user_osm.country"
     elif spatialLevel == "state":
-        rest_user_osm_level == "rest.features.properties.state"
+        rest_user_osm_level = "rest.features.properties.state"
     elif spatialLevel == "city":
-        rest_user_osm_level == "rest.features.properties.city"
+        rest_user_osm_level = "rest.features.properties.city"
 
     def is_an_user_flooding(term, locality):
         client = Elasticsearch("http://localhost:9200")
@@ -2213,16 +2218,16 @@ def post_traitement_flood(biggest, logger, spatialLevel, nb_of_tweets_flood=5):
                 user = hit["_source"]["user"]["name"]
                 list_of_user.append(user)
             dict_user_nbtweet = dict(Counter(list_of_user))
-            d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= nb_of_tweets_flood_global)
+            d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= (ratio_of_flood_global * len(list_of_user)))
             if len(d) > 0 : # there is a flood on this term:
                 return 1
             else:
                 return 0
         except:
-            logger.error("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
+            logger.debug("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
             return 0
 
-    logger.info("start remove terms if they coming from a flooding user, ie, terms in "+str(nb_of_tweets_flood)+" tweets from an unique user")
+    logger.debug("start remove terms if they coming from a flooding user, ie, terms in "+str(ratio_of_flood_global*100)+"% of tweets from an unique user over tweets with this words")
     tqdm.pandas()
     biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
     return biggest
@@ -2410,7 +2415,22 @@ if __name__ == '__main__':
     biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
     """
     # Post traitement : remove terms coming from user who flood
+    logger.info("post-traitement on: "+spatialLevel)
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_country"
+    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
+    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
+    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
+
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_state"
+    spatialLevel = 'state'
+    logger.info("post-traitement on: " + spatialLevel)
+    biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
+    biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
+    biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
+
+    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb_city"
+    spatialLevel = 'city'
+    logger.info("post-traitement on: " + spatialLevel)
     biggest_H_TFIDF = pd.read_csv(f_path_result+'/h-tfidf-Biggest-score.csv', index_col=0)
     biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF,logger, spatialLevel=spatialLevel)
     biggest_H_TFIDF_with_flood.to_csv(f_path_result+"/h-tfidf-Biggest-score-flooding.csv")
