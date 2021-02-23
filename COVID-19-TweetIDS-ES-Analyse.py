@@ -283,7 +283,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         period.sort()
         for day in period:
             # aggregate city and date document
-            document = '\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            document = '.\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
             # Bag of Words and preprocces
             # preproccesFullText = preprocessTerms(document)
             tweetsOfDayAndCity = {
@@ -303,23 +303,8 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
-    def bigrams_per_line(doc):
-        """
-        Overload analyzer for Sklearn TF-IDFVectorizer and CountVectorizer
-        See : https://stackoverflow.com/questions/26907309/create-ngrams-only-for-words-on-the-same-line-disregarding-line-breaks-with-sc
-
-        The problem was the vocabulary has bigram formed with last word of precedent tweet with 1rst word of the followinf tweet
-        :param doc:
-        :return:
-        """
-        for ln in doc.split('\n'):
-            terms = re.findall(r'\w{2,}', ln)
-            for bigram in zip(terms, terms[1:]):
-                yield '%s %s' % bigram
-
     cd = CountVectorizer(
         stop_words='english',
-        analyzer=bigrams_per_line,
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         min_df=2, # token at least present in 2 cities : reduce size of matrix
         ngram_range=(1,2),
@@ -2255,7 +2240,7 @@ if __name__ == '__main__':
     ## Path to results :
     f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb"
     ## Spatial level hierarchie :
-    spatialLevels = ['city', 'state', 'country']
+    spatialLevels = ['country', 'state', 'city']
     ## Time level hierarchie :
     timeLevel = "week"
     ## elastic query :
