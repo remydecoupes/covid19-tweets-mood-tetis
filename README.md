@@ -29,7 +29,7 @@ The following script allows to :
 
 [COVID-19-TweetIDS-ES-Analyse.py](COVID-19-TweetIDS-ES-Analyse.py)
 
-More experimentations or methods for evaluate H-TFIDF compared with a classical TF-IDF can be found [script]() and [explaination](readme_ressources/eda_es_md)
+More experimentations or methods for evaluate H-TFIDF compared with a classical TF-IDF can be found [script](exploration_data_analyse/eda-es.py) and [explaination](readme_ressources/eda_es.md)
 
 ## OPTIONAL Script:
 in order to **explore the dataset without using elastic search** (except from one of them), here are some scripts that allow to have first results :
