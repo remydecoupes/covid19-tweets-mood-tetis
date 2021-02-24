@@ -812,17 +812,17 @@ if __name__ == '__main__':
     ## Rebuild H-TFIDF (with Matrix Occurence)
     build_htfidf = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = True
+    build_classical_tfidf = False
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = False
+    build_tsne = True
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = True
+    build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-trautement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = True
+    build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
 
     # Global parameters :
@@ -902,8 +902,10 @@ if __name__ == '__main__':
                                    temporal_period='all')
     if build_tsne :
         f_path_result_tsne = f_path_result+"/tsne"
-        biggest_TFIDF_country = pd.read_csv(f_path_result_tfidf_by_locality+"TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
-        biggest_TFIDF_whole = pd.read_csv(f_path_result_tfidf+"TFIDF_BiggestScore_on_whole_corpus.csv")
+        if not os.path.exists(f_path_result_tsne):
+            os.makedirs(f_path_result_tsne)
+        biggest_TFIDF_country = pd.read_csv(f_path_result+"/tf-idf-classical/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv", index_col=0)
+        biggest_TFIDF_whole = pd.read_csv(f_path_result+"/tf-idf-classical/TFIDF_BiggestScore_on_whole_corpus.csv")
         biggest_H_TFIDF = pd.read_csv(f_path_result+"/"+build_tsne_spatial_level+'/h-tfidf-Biggest-score.csv', index_col=0)
         # t_SNE visulation
         t_SNE_bert_embedding_visualization(biggest_TFIDF_country, logger, listOfLocalities=listOfLocalities,
