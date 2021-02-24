@@ -283,7 +283,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         period.sort()
         for day in period:
             # aggregate city and date document
-            document = '.\n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
+            document = '. \n'.join(matrix.loc[matrix['created_at'].dt.date == day]['tweet'].tolist())
             # Bag of Words and preprocces
             # preproccesFullText = preprocessTerms(document)
             tweetsOfDayAndCity = {
@@ -307,8 +307,8 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         stop_words='english',
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         min_df=2, # token at least present in 2 cities : reduce size of matrix
-        ngram_range=(1,2),
-        token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
+        ngram_range=(1, 2),
+        token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
     )
     cd.fit(matrixAggDay['tweetsList'])
@@ -321,11 +321,6 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     listOfTerms = cd.get_feature_names()
     ##initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
-    ## Remove stopword
-    for term in matrixOccurence.keys():
-        if term in stopwords.words('english'):
-            del matrixOccurence[term]
-
     # save to file
     logger.info("Saving file: occurence of term: "+str(matrixOccurence_fout))
     matrixOccurence.to_csv(matrixOccurence_fout)
@@ -496,7 +491,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
             except:
                 extractBiggest.loc[row] = row_without_zero.nlargest(len(row_without_zero)).keys()
         except:
-            logger.info("H-TFIDF: city "+str(matrixTFIDF.loc[row].name)+ "not enough terms")
+            logger.debug("H-TFIDF: city "+str(matrixTFIDF.loc[row].name)+ "not enough terms")
     extractBiggest.to_csv(biggestHTFIDFscore_fname+".old.csv")
     # Transpose this table in order to share the same structure with TF-IDF classifical biggest score :
     hbt = pd.DataFrame()
@@ -937,7 +932,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
             stop_words='english',
             min_df=0.001,
             ngram_range=(1, 2),
-            token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
+            token_pattern='[a-zA-Z0-9#@]+',
         )
         # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
         try:
@@ -2220,39 +2215,42 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
             try:
                 result = Elasticsearch.search(client, index=index, body=query)
                 list_of_user = []
-                for hit in result["hits"]["hits"]:
-                    user = hit["_source"]["user"]["name"]
-                    list_of_user.append(user)
-                dict_user_nbtweet = dict(Counter(list_of_user))
-                d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= (ratio_of_flood_global * len(list_of_user)))
-                if len(d) > 0 : # there is a flood on this term:
-                    return 1
-                else:
-                    return 0
+                if len(result["hits"]["hits"]) != 0:
+                    for hit in result["hits"]["hits"]:
+                        user = hit["_source"]["user"]["name"]
+                        list_of_user.append(user)
+                    dict_user_nbtweet = dict(Counter(list_of_user))
+                    d = dict((k, v) for k, v in dict_user_nbtweet.items() if v >= (ratio_of_flood_global * len(list_of_user)))
+                    if len(d) > 0 : # there is a flood on this term:
+                        return 1
+                    else:
+                        return 0
+                else: # not found in ES why ?
+                    return "not_in_es"
             except:
-                logger.debug("Elasticsearch deamon may not be launched or there is a trouble with this term: " + str(term))
-                return 0
+                logger.info("There is a trouble with this term: " + str(term))
+                return np.NAN
         else:
             return 0
 
     logger.debug("start remove terms if they coming from a flooding user, ie, terms in "+str(ratio_of_flood_global*100)+"% of tweets from an unique user over tweets with this words")
     tqdm.pandas()
     biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
-    return biggestr
+    return biggest
 
 
 
 if __name__ == '__main__':
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = True
+    build_htfidf = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = True
+    build_classical_tfidf = False
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = True
+    build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
@@ -2459,10 +2457,10 @@ if __name__ == '__main__':
     if build_posttraitement_flooding:
         # Post traitement : remove terms coming from user who flood
         for spatial_level_flood in build_posttraitement_flooding_spatial_levels:
-            logger.info("post-traitement flooding on: " + spatialLevel)
-            f_path_result_flood = f_path_result + "/" + spatialLevel
+            logger.info("post-traitement flooding on: " + spatial_level_flood)
+            f_path_result_flood = f_path_result + "/" + spatial_level_flood
             biggest_H_TFIDF = pd.read_csv(f_path_result_flood + '/h-tfidf-Biggest-score.csv', index_col=0)
-            biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF, logger, spatialLevel=spatialLevel)
+            biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF, logger, spatialLevel=spatial_level_flood)
             biggest_H_TFIDF_with_flood.to_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv")
 
     logger.info("H-TFIDF expirements stops")
