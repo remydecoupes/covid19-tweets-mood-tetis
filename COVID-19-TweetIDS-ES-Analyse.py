@@ -603,7 +603,6 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
     """
     modelSentenceTransformer = SentenceTransformer('distilbert-base-nli-mean-tokens')
 
-
     # filter by localities
     for locality in biggest_score[spatial_hieararchy].unique():
         if locality not in listOfLocalities:
@@ -669,7 +668,7 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
 
 def bert_embedding_filtred(biggest_score, listOfLocalities="all", spatial_hieararchy="country"):
     """
-    Retrieve embedding of a matrix of termes (possibility of filtring by a list of locality)
+    Retrieve embedding of a matrix of terms (possibility of filtring by a list of locality)
     :param biggest_score: pd.Datraframe with columns : [terms, country/state/city]
     :param listOfLocalities:
     :param spatial_hieararchy:
@@ -720,6 +719,50 @@ def similarity_inter_matrix(matrix1, matrix2):
     """
     similarity = 1 - sp.distance.cdist(matrix1, matrix2, 'cosine')
     return similarity
+
+def clustering_terms(biggest, logger, cluster_f_out, listOfLocalities="all", spatial_hieararchy="country", method="kmeans"):
+    """
+
+    :param biggest:
+    :param method:
+    :return:
+    """
+    method_list = ["kmeans", "agglomerative_clustering"]
+    if method not in method_list:
+        logger.error("This method is not implemented for clustering: "+str(method))
+        return -1
+
+    # filter by localities
+    if listOfLocalities != "all":
+        for locality in biggest[spatial_hieararchy].unique():
+            if locality not in listOfLocalities:
+                biggest = biggest.drop(biggest[biggest[spatial_hieararchy] == locality].index)
+
+    embeddings = bert_embedding_filtred(biggest)
+
+    if method == "kmeans":
+        # Perform kmean clustering
+        num_clusters = 5
+        clustering_model = KMeans(n_clusters=num_clusters)
+        clustering_model.fit(embeddings)
+        cluster_assignment = clustering_model.labels_
+    elif method == "agglomerative_clustering":
+        # Normalize the embeddings to unit length
+        corpus_embeddings = embeddings / np.linalg.norm(embeddings, axis=1, keepdims=True)
+        # Perform Agglomerative clustering
+        clustering_model = AgglomerativeClustering(n_clusters=None,
+                                                   distance_threshold=1.5)  # , affinity='cosine', linkage='average', distance_threshold=0.4)
+        clustering_model.fit(corpus_embeddings)
+        cluster_assignment = clustering_model.labels_
+
+    clustered_sentences = {}
+    for sentence_id, cluster_id in enumerate(cluster_assignment):
+        if str(cluster_id) not in clustered_sentences:
+            clustered_sentences[str(cluster_id)] = []
+        clustered_sentences[str(cluster_id)].append(biggest['terms'].iloc[sentence_id])
+    with open(cluster_f_out, "w") as outfile:
+        json.dump(clustered_sentences, outfile)
+    logger.info("file " + cluster_f_out + " has been saved")
 
 def geocoding_token(biggest, listOfLocality, spatial_hieararchy, logger):
     """
@@ -814,16 +857,19 @@ if __name__ == '__main__':
     ## eval 1 : Comparison with classical TF-IDf
     build_classical_tfidf = False
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = True
+    build_tsne = False
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
     build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
-    ## post-trautement 2 : remove terms form a flooding user
+    ## post-traitement 2 : remove terms form a flooding user
     build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
+    ##  Analyse H-TFIDF for epidemiology
+    build_clustering = True
+    build_clustering_spatial_level = "country"
 
     # Global parameters :
     ## Path to results :
@@ -900,6 +946,7 @@ if __name__ == '__main__':
                                    path_for_filesaved=f_path_result_tfidf_by_locality,
                                    spatial_hiearchy="country",
                                    temporal_period='all')
+
     if build_tsne :
         f_path_result_tsne = f_path_result+"/tsne"
         if not os.path.exists(f_path_result_tsne):
@@ -1022,7 +1069,6 @@ if __name__ == '__main__':
                                                        logger=logger)
         biggest_TFIDF_whole_gepocode.to_csv(f_path_result+"/TFIDF_BiggestScore_on_whole_corpus_geocode.csv")
 
-
     if build_posttraitement_flooding:
         # Post traitement : remove terms coming from user who flood
         for spatial_level_flood in build_posttraitement_flooding_spatial_levels:
@@ -1031,5 +1077,26 @@ if __name__ == '__main__':
             biggest_H_TFIDF = pd.read_csv(f_path_result_flood + '/h-tfidf-Biggest-score.csv', index_col=0)
             biggest_H_TFIDF_with_flood = post_traitement_flood(biggest_H_TFIDF, logger, spatialLevel=spatial_level_flood)
             biggest_H_TFIDF_with_flood.to_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv")
+
+    if build_clustering:
+        # Create clustering
+        # method="agglomerative_clustering"
+        method = "kmeans"
+        f_path_result_flood = f_path_result + "/" + build_clustering_spatial_level
+        f_path_result_clustering = f_path_result + "/" + build_clustering_spatial_level
+        if not os.path.exists(f_path_result_clustering):
+            os.makedirs(f_path_result_clustering)
+        # open result post_traited
+        try:
+            biggest_H_TFIDF = pd.read_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv", index_col=0)
+        except:
+            logger.error("Clustering: file biggest score doesn't exist")
+        # drop token from flooding user and drop ngram not in the same sentence (see post_traitement)
+        biggest = biggest_H_TFIDF[biggest_H_TFIDF["user_flooding"] == str(0)]
+        # biggest.reset_index(inplace=True)
+        clustering_terms(biggest, logger, f_path_result_clustering+"/test.json",
+                         listOfLocalities=listOfLocalities,
+                         spatial_hieararchy=build_clustering_spatial_level,
+                         method=method)
 
     logger.info("H-TFIDF expirements stops")
