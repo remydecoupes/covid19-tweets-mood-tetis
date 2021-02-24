@@ -867,9 +867,14 @@ if __name__ == '__main__':
     ## post-traitement 2 : remove terms form a flooding user
     build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
-    ##  Analyse H-TFIDF for epidemiology
+    ##  Analyse H-TFIDF for epidemiology 1 : clustering
     build_clustering = True
-    build_clustering_spatial_level = "country"
+    build_clustering_spatial_levels = ['country', 'state']
+    build_clustering_list_hierachical_locality = {
+        "country": ["France", "Deutschland", "España", "Italia", "United Kingdom"],
+        'state': ["Lombardia", "Lazio"],
+        # "city": ["London"]
+    }
 
     # Global parameters :
     ## Path to results :
@@ -1082,23 +1087,27 @@ if __name__ == '__main__':
         # Create clustering
         # method="agglomerative_clustering"
         method_list = ["kmeans", "agglomerative_clustering"]
-        f_path_result_flood = f_path_result + "/" + build_clustering_spatial_level
-        f_path_result_clustering = f_path_result + "/" + build_clustering_spatial_level + "/clustering"
-        if not os.path.exists(f_path_result_clustering):
-            os.makedirs(f_path_result_clustering)
-        # open result post_traited
-        try:
-            biggest_H_TFIDF = pd.read_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv", index_col=0)
-        except:
-            logger.error("Clustering: file biggest score doesn't exist")
-        # drop token from flooding user and drop ngram not in the same sentence (see post_traitement)
-        biggest = biggest_H_TFIDF[biggest_H_TFIDF["user_flooding"] == str(0)]
-        for method in method_list:
-            for locality in listOfLocalities:
-                f_path = f_path_result_clustering + "/" + locality + "_" + method + ".json"
-                clustering_terms(biggest, logger, f_path,
-                                 listOfLocalities=locality,
-                                 spatial_hieararchy=build_clustering_spatial_level,
-                                 method=method)
+        for spatial_level in build_clustering_spatial_levels:
+            f_path_result_flood = f_path_result + "/" + spatial_level
+            f_path_result_clustering = f_path_result + "/" + spatial_level + "/clustering"
+            if not os.path.exists(f_path_result_clustering):
+                os.makedirs(f_path_result_clustering)
+            # open result post_traited
+            try:
+                biggest_H_TFIDF = pd.read_csv(f_path_result_flood + "/h-tfidf-Biggest-score-flooding.csv", index_col=0)
+            except:
+                logger.error("Clustering: file biggest score doesn't exist")
+            # drop token from flooding user and drop ngram not in the same sentence (see post_traitement)
+            biggest = biggest_H_TFIDF[biggest_H_TFIDF["user_flooding"] == str(0)]
+            for method in method_list:
+                for locality in build_clustering_list_hierachical_locality[spatial_level]:
+                    f_path = f_path_result_clustering + "/" + locality + "_" + method + ".json"
+                    try:
+                        clustering_terms(biggest, logger, f_path,
+                                         listOfLocalities=locality,
+                                         spatial_hieararchy=spatial_level,
+                                         method=method)
+                    except:
+                        logger.error("Impossible to cluster for " + spatial_level + "with method: "+method)
 
     logger.info("H-TFIDF expirements stops")
