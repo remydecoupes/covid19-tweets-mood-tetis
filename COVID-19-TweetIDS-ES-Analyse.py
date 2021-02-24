@@ -369,13 +369,12 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
     # listOfCity = ['London', 'Glasgow', 'Belfast', 'Cardiff']
     # listOfState = ["England", "Scotland", "Northern Ireland", "Wales"]
 
-    # Query Elasticsearch to get all tweets from UK
     tweets = elasticsearch_query(elastic_query_fname, logger)
     if listOfCities == 'all':
         listOfCities = []
         listOfStates = []
         listOfCountry = []
-        for triple in tweetsByCityAndDate:
+        for triple in tweets:
             splitted = triple.split("_")
             listOfCities.append(splitted[0])
             listOfStates.append(splitted[1])
@@ -421,8 +420,8 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         matrix_by_locality = matrixAllTweets[matrixAllTweets[spatial_hiearchy] == locality]
         vectorizer = TfidfVectorizer(
             stop_words='english',
-            #min_df=0.001,
-            max_features=50000,
+            min_df=0.001,
+            # max_features=50000,
             ngram_range=(1, 4),
             token_pattern='[a-zA-Z0-9#@]+',
         )
@@ -539,12 +538,11 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./
 
     vectorizer = TfidfVectorizer(
         stop_words='english',
-        #min_df=0.001,
-        max_features=50000,
+        min_df=0.001,
+        # max_features=50000,
         ngram_range=(1, 4),
         token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
     )
-    # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
     try:
         vectors = vectorizer.fit_transform(matrixAllTweets['tweet'])
         feature_names = vectorizer.get_feature_names()
@@ -812,7 +810,7 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 if __name__ == '__main__':
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = True
+    build_htfidf = False
     ## eval 1 : Comparison with classical TF-IDf
     build_classical_tfidf = True
     ## evla 2 : Use word_embedding with t-SNE

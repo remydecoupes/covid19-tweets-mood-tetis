@@ -48,3 +48,15 @@ This is based upon works of:
 * **Gaurav Shrivastava** who code FASTR algorithme in python. His script is in this repository
 
 NB : **Due to the size of this corpus, biotex could not be launched on the full corpus. It has to be splitt in 30k tweets. Then results have to be merged and ranked**
+
+## License
+This code is provided under the [CeCILL-B](https://cecill.info/licences/Licence_CeCILL-B_V1-en.html) free software license agreement.
+
+## Data Usage Agreement
+By using the [E.Echen's dataset](https://github.com/echen102/COVID-19-TweetIDs), as [stated by the author](https://github.com/echen102/COVID-19-TweetIDs#data-usage-agreement) you agree to abide by the stipulations in the license, remain in compliance with Twitter’s [Terms of Service](https://developer.twitter.com/en/developer-terms/agreement-and-policy), and cite the following manuscript: 
+
+Chen E, Lerman K, Ferrara E
+Tracking Social Media Discourse About the COVID-19 Pandemic: Development of a Public Coronavirus Twitter Data Set
+JMIR Public Health Surveillance 2020;6(2):e19273 
+DOI: 10.2196/19273 
+PMID: 32427106
