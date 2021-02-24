@@ -359,9 +359,9 @@ def randomSampling4PythonTFIDF(directory, outputdir):
 
 
 if __name__ == '__main__':
-    hydrateTweetsDir = Path('hydrating-and-extracting')
-    biotexcopruspath = Path('biotexcorpus')
-    tdidfpythonpath = Path('tfidfpython')
+    hydrateTweetsDir = Path('../hydrating-and-extracting')
+    biotexcopruspath = Path('../biotexcorpus')
+    tdidfpythonpath = Path('../tfidfpython')
 
     print("Begin")
     ## Test biotex on 4M tweets : doesn't work
@@ -405,7 +405,7 @@ if __name__ == '__main__':
     startDate = date(2020, 1, 22)
     enDate = date(2020, 2, 12)
     sizeOfCorpus = 30000
-    biotexcopruspath = Path('biotexcorpus/subdividedcorpus')
+    biotexcopruspath = Path('../biotexcorpus/subdividedcorpus')
     SubdividedTweetsToBioTexCorpusOptimizedWithoutRT(hydrateTweetsDir, sizeOfCorpus, startDate, enDate,
                                                      biotexcopruspath)
 

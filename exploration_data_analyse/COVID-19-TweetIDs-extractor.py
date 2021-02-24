@@ -61,8 +61,8 @@ def extract_json_from_tweets(directory):
 
 
 if __name__ == '__main__':
-    hydrateTweetsDir = Path('hydrating-and-extracting')
-    extractedTweetsDir = Path('extractedTweetsWithoutPreprocess')
+    hydrateTweetsDir = Path('../hydrating-and-extracting')
+    extractedTweetsDir = Path('../extractedTweetsWithoutPreprocess')
 
     print("Begin tweets extraction")
     # # Extract full_text

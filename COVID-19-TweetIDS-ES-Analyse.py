@@ -306,8 +306,9 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     cd = CountVectorizer(
         stop_words='english',
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
-        min_df=2, # token at least present in 2 cities : reduce size of matrix
-        ngram_range=(1, 2),
+        #min_df=2, # token at least present in 2 cities : reduce size of matrix
+        max_features=50000,
+        ngram_range=(1, 3),
         token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
     )
@@ -2243,7 +2244,7 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 if __name__ == '__main__':
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = False
+    build_htfidf = True
     ## eval 1 : Comparison with classical TF-IDf
     build_classical_tfidf = False
     ## evla 2 : Use word_embedding with t-SNE

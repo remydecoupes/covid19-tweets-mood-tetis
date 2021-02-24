@@ -45,7 +45,7 @@ def plotTweetsFromEchen(startDate, enDate):
     :return:
     """
     listOfTweetsPerDay = defaultdict()
-    tweetsDir = Path('echen102_COVID19-TweetIDs/COVID-19-TweetIDs')
+    tweetsDir = Path('../echen102_COVID19-TweetIDs/COVID-19-TweetIDs')
     for single_date in daterange(startDate, enDate):
         listOfTweetsPerDay[single_date.strftime("%Y-%m-%d")] = nbOfTweetsPerDay(single_date, tweetsDir)
         #listOfTweetsPerDay[single_date] = nbOfTweetsPerDay(single_date, tweetsDir)
@@ -91,7 +91,7 @@ def plotTweetsAndRT(startDate, enDate):
     :return:
     """
     listOfTweetsPerDay = defaultdict()
-    tweetsHydrateDir = Path('hydrating-and-extracting')
+    tweetsHydrateDir = Path('../hydrating-and-extracting')
     df = pd.DataFrame(columns=('date', 'tweets', 'retweets'))
     i = 0
     for single_date in daterange(startDate, enDate):
@@ -129,7 +129,7 @@ def tweetLocationExtract(geoJsonfile):
     """
     # startDate = date(2020, 1, 22)
     # enDate = date(2020, 2, 11)
-    tweetsHydrateDir = Path('hydrating-and-extracting')
+    tweetsHydrateDir = Path('../hydrating-and-extracting')
     geo_data = {
         "type": "FeatureCollection",
         "features": []

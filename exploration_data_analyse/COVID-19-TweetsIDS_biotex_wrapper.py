@@ -6,9 +6,9 @@ from pathlib import Path
 import pandas as pd
 
 home = str(Path.home())
-biotexWrapperFizePath = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotex-wrapper-fize/biotex_python/biotex')
-biotexCorpusPath = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexcorpus')
-biotexResultPath = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults')
+biotexWrapperFizePath = Path('/biotex-wrapper-fize/biotex_python/biotex')
+biotexCorpusPath = Path('/biotexcorpus')
+biotexResultPath = Path('/biotexResults')
 
 
 class BiotexWrapper():
@@ -50,7 +50,7 @@ class BiotexWrapper():
         """
         Create the configuration file to execute Biotex
         """
-        f=open("configuration.txt", 'w')
+        f=open("../configuration.txt", 'w')
         for key in confDict.keys():
             f.write("{0}={1}\n".format(key,confDict[key]))
         f.close()
@@ -152,8 +152,8 @@ if __name__ == '__main__':
     # out_.close()
 
     ## Browse date
-    biotexCorpusPath = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexcorpus/subdividedcorpus')
-    biotexResultPath = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/ftfidfc-multi')
+    biotexCorpusPath = Path('/biotexcorpus/subdividedcorpus')
+    biotexResultPath = Path('/biotexResults/subdividedcorpus/ftfidfc-multi')
     for file in biotexCorpusPath.glob("english-*"):
         print("---------------------------")
         print("Work on file: "+str(file))

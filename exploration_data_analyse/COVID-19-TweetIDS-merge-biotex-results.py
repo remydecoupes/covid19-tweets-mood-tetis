@@ -334,11 +334,11 @@ def statsOnRankedTerm(rankedfilename):
 
 if __name__ == '__main__':
     print("begin")
-    biotexResultDir = Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus')
+    biotexResultDir = Path('/biotexResults/subdividedcorpus')
     mergeResultDir = \
-        Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/biotexResults/subdividedcorpus/merge')
+        Path('/biotexResults/subdividedcorpus/merge')
     fastrVariants = \
-        Path('/home/rdecoupe/PycharmProjects/covid19tweets-MOOD-tetis/fastr/driven_extraction_version_300K.json')
+        Path('/fastr/driven_extraction_version_300K.json')
     rankedfilename = str(mergeResultDir) + "/compareparam.csv"
     sentionrankedfilename = str(mergeResultDir) + "/compareparamWithSenti.csv"
     # print("start FASTR")
