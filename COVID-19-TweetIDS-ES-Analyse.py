@@ -204,7 +204,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         #min_df=2, # token at least present in 2 cities : reduce size of matrix
         max_features=50000,
-        ngram_range=(1, 3),
+        ngram_range=(1, 4),
         token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
     )
@@ -421,8 +421,9 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         matrix_by_locality = matrixAllTweets[matrixAllTweets[spatial_hiearchy] == locality]
         vectorizer = TfidfVectorizer(
             stop_words='english',
-            min_df=0.001,
-            ngram_range=(1, 2),
+            #min_df=0.001,
+            max_features=50000,
+            ngram_range=(1, 4),
             token_pattern='[a-zA-Z0-9#@]+',
         )
         # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
@@ -538,8 +539,9 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./
 
     vectorizer = TfidfVectorizer(
         stop_words='english',
-        min_df=0.001,
-        ngram_range=(1, 2),
+        #min_df=0.001,
+        max_features=50000,
+        ngram_range=(1, 4),
         token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
     )
     # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
@@ -812,12 +814,12 @@ if __name__ == '__main__':
     ## Rebuild H-TFIDF (with Matrix Occurence)
     build_htfidf = True
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = False
+    build_classical_tfidf = True
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = False
+    build_boxplot = True
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
