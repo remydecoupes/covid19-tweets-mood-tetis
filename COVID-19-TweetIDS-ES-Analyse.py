@@ -1081,9 +1081,9 @@ if __name__ == '__main__':
     if build_clustering:
         # Create clustering
         # method="agglomerative_clustering"
-        method = "kmeans"
+        method_list = ["kmeans", "agglomerative_clustering"]
         f_path_result_flood = f_path_result + "/" + build_clustering_spatial_level
-        f_path_result_clustering = f_path_result + "/" + build_clustering_spatial_level
+        f_path_result_clustering = f_path_result + "/" + build_clustering_spatial_level + "/clustering"
         if not os.path.exists(f_path_result_clustering):
             os.makedirs(f_path_result_clustering)
         # open result post_traited
@@ -1093,10 +1093,12 @@ if __name__ == '__main__':
             logger.error("Clustering: file biggest score doesn't exist")
         # drop token from flooding user and drop ngram not in the same sentence (see post_traitement)
         biggest = biggest_H_TFIDF[biggest_H_TFIDF["user_flooding"] == str(0)]
-        # biggest.reset_index(inplace=True)
-        clustering_terms(biggest, logger, f_path_result_clustering+"/test.json",
-                         listOfLocalities=listOfLocalities,
-                         spatial_hieararchy=build_clustering_spatial_level,
-                         method=method)
+        for method in method_list:
+            for locality in listOfLocalities:
+                f_path = f_path_result_clustering + "/" + locality + "_" + method + ".json"
+                clustering_terms(biggest, logger, f_path,
+                                 listOfLocalities=locality,
+                                 spatial_hieararchy=build_clustering_spatial_level,
+                                 method=method)
 
     logger.info("H-TFIDF expirements stops")
