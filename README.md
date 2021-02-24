@@ -1,10 +1,10 @@
 # Extract terms about covid-19 in tweets
 
-This project aims to extracts terms about covid-19 in the corpus of tweets created by Echen : https://github.com/echen102/COVID-19-TweetIDs
+This project aims to extract terms about covid-19 in the corpus of tweets created by Emily Chen : https://github.com/echen102/COVID-19-TweetIDs
 
 ## Pre-requisites :
 Tweets have to be download (i.e. hydrated) from Echen repository and indexed into an Elasticsearch index. See steps belows :
-1. Git pull echen directoru (https://github.com/echen102/COVID-19-TweetIDs)
+1. Git pull echen directory (https://github.com/echen102/COVID-19-TweetIDs)
 2. Install twarc from pip and configure with a twitter account. Cf : https://github.com/DocNow/twarc
 3. Launch echen hydrate script
 4. Copy all hydrating tweets. There are zipped :
@@ -19,7 +19,7 @@ Tweets have to be download (i.e. hydrated) from Echen repository and indexed int
         * `sudo /usr/share/logstash/bin/logstash -f elasticsearch/logstash-config/json.conf`
         * /!\ Be carefull if you try to index with a laptop using Wifi, it may power off wlan interface even if you desable sleep mode. If you are using a debian/ubuntu OS, you'll need to disable power management on your wlan interface. =>
         `sudo iwconfig wlo1 power off` (non permanent on reboot)
-    3. (OPTIONAL) : Kibana : you can import [dashboard]('elasticsearch/kibana-dashboard')
+    3. (OPTIONAL) : Kibana : you can import [dashboard](elasticsearch/kibana-dashboard)
     
 ## Run the main script:
 The following script allows to :
@@ -29,10 +29,10 @@ The following script allows to :
 
 [COVID-19-TweetIDS-ES-Analyse.py](COVID-19-TweetIDS-ES-Analyse.py)
 
-More experimentations or methods for evaluate H-TFIDF compared with a classical TF-IDF can be found [script]() and [explaination]('readme_ressources/eda_es_md')
+More experimentations or methods for evaluate H-TFIDF compared with a classical TF-IDF can be found [script]() and [explaination](readme_ressources/eda_es_md)
 
 ## OPTIONAL Script:
-in order to **explore the dataset without using elastic search**, here are some scripts that allow to have first results :
+in order to **explore the dataset without using elastic search** (except from one of them), here are some scripts that allow to have first results :
 
 * [Dataset Analysis](exploration_data_analyse/COVID-19-TweetIDs-dataset-analyse.py) : some stats computed on Echen corpus
 * [Extractor](exploration_data_analyse/COVID-19-TweetIDs-extractor.py) : script extracting only tweets'contents (without RT) in order to share data without all twitter's verbose API 
@@ -40,6 +40,7 @@ in order to **explore the dataset without using elastic search**, here are some 
     1. [preprocess](exploration_data_analyse/COVID-19-TweetIDs-preprocess.py) : cleaning up tweets and building corpus in the biotex syntaxe
     2. [biotex-wrapper](exploration_data_analyse/COVID-19-TweetsIDS_biotex_wrapper.py): An automatisation of biotex on 4 settings
     3. [merge biotex results](exploration_data_analyse/COVID-19-TweetIDS-merge-biotex-results.py): Due to the size of this corpus, biotex could not be launched on the full corpus. It has to be splitt in 30k tweets. Then results have to be merged and ranked
+* [Other fonctions to explore but which use Elasticsearch](exploration_data_analyse/eda-es.py)
     
 This is based upon works of:
 * **Juan Antonio LOSSIO-VENTURA** creator of [BioTex](https://github.com/sifrproject/biotex/tree/master)
