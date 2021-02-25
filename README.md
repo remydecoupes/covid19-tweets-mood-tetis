@@ -1,6 +1,7 @@
-# Extract terms about covid-19 in tweets
+# Hierarchical_TFIDF applied on covid-19 tweets
 
-This project aims to extract terms about covid-19 in the corpus of tweets created by Emily Chen : https://github.com/echen102/COVID-19-TweetIDs
+This project aims to extract discriminative terms on spatial and time windows. 
+Experimentations are lead on covid-19 on the corpus of tweets created by Emily Chen : https://github.com/echen102/COVID-19-TweetIDs
 
 ## Pre-requisites :
 Tweets have to be download (i.e. hydrated) from Echen repository and indexed into an Elasticsearch index. See steps belows :

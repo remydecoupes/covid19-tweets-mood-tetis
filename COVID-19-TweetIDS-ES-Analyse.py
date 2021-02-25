@@ -665,10 +665,10 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
         clustered_sentences[cluster_id].append(biggest_score['terms'].iloc[sentence_id])
 
     #for i, cluster in enumerate(clustered_sentences):
-    for i, cluster in clustered_sentences.items():
-        print("Cluster ", i+1)
-        print(cluster)
-        print("")
+    # for i, cluster in clustered_sentences.items():
+    #     print("Cluster ", i+1)
+    #     print(cluster)
+    #     print("")
 
 def bert_embedding_filtred(biggest_score, listOfLocalities="all", spatial_hieararchy="country"):
     """
@@ -873,22 +873,22 @@ if __name__ == '__main__':
 
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = True
+    build_htfidf = False
     build_htfidf_save_intermediaire_files = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = True
+    build_classical_tfidf = False
     build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = True
+    build_tsne = False
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = True
+    build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
     build_posttraitement_flooding = True
-    build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
+    build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
     build_clustering = True
     build_clustering_spatial_levels = ['country', 'state']
@@ -958,7 +958,7 @@ if __name__ == '__main__':
         ### By Country
         TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
                                    logger=logger,
-                                   save_intermediaire_files=build_classical_tfidf_save_intermediaire_files
+                                   save_intermediaire_files=build_classical_tfidf_save_intermediaire_files,
                                    nb_biggest_terms=500,
                                    path_for_filesaved=f_path_result_tfidf_by_locality,
                                    spatial_hiearchy="country",
