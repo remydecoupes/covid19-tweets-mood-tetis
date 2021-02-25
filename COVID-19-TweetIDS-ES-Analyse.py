@@ -350,7 +350,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
         hbt = hbt.append(hbtrow, ignore_index=True)
     hbt.to_csv(biggestHTFIDFscore_fname)
 
-def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500, path_for_filesaved="./",
+def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, save_intermediaire_files, nb_biggest_terms=500, path_for_filesaved="./",
                                spatial_hiearchy="country", temporal_period='all', listOfCities='all'):
     """
     Compute TFIDF and TF from an elastic query file
@@ -440,8 +440,9 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
         TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
         locality_format = locality.replace("/", "_")
         locality_format = locality_format.replace(" ", "_")
-        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
-        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
+        if save_intermediaire_files:
+            logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
+            TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_"+locality_format+"_corpus.csv")
         ## Extract N TOP ranking score
         extractBiggest = TFIDFClassical.max().nlargest(nb_biggest_terms)
         extractBiggest = extractBiggest.to_frame()
@@ -484,7 +485,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, nb_biggest_terms=500
     extractBiggestTF_allstates.to_csv(path_for_filesaved+"/TF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
     extractBiggestTFIDF_allstates.to_csv(path_for_filesaved+"/TF-IDF_BiggestScore_on_"+spatial_hiearchy+"_corpus.csv")
 
-def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./",
+def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, save_intermediaire_files, path_for_filesaved="./",
                              temporal_period='all', listOfCities='all'):
     """
     Compute TFIDF and TF from an elastic query file
@@ -555,8 +556,9 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, path_for_filesaved="./
         exit(-1)
     ## matrixTFIDF
     TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
-    logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_whole_corpus.csv")
-    TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_whole_corpus.csv")
+    if save_intermediaire_files:
+        logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_whole_corpus.csv")
+        TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_whole_corpus.csv")
     ## Extract N TOP ranking score
     extractBiggest = TFIDFClassical.max()
     extractBiggest = extractBiggest[extractBiggest == 1] # we keep only term with high score TF-IDF, i.e 1.0
@@ -853,12 +855,29 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 
 
 if __name__ == '__main__':
+    # Global parameters :
+    ## Spatial level hierarchie :
+    # spatialLevels = ['country', 'state', 'city']
+    spatialLevels = ['country', 'state']
+    ## Time level hierarchie :
+    timeLevel = "week"
+    ## List of country to work on :
+    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+    ## elastic query :
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
+    ## Path to results :
+    period_extent = "feb"
+    f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
+    if not os.path.exists(f_path_result):
+        os.makedirs(f_path_result)
+
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
     build_htfidf = True
     build_htfidf_save_intermediaire_files = False
     ## eval 1 : Comparison with classical TF-IDf
     build_classical_tfidf = True
+    build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = True
     build_tsne_spatial_level = "country"
@@ -878,20 +897,6 @@ if __name__ == '__main__':
         'state': ["Lombardia", "Lazio"],
         # "city": ["London"]
     }
-
-    # Global parameters :
-    ## Path to results :
-    f_path_result = "elasticsearch/analyse/nldb21/results/feb"
-    if not os.path.exists(f_path_result):
-        os.makedirs(f_path_result)
-    ## Spatial level hierarchie :
-    spatialLevels = ['country', 'state', 'city']
-    ## Time level hierarchie :
-    timeLevel = "week"
-    ## List of country to work on :
-    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
-    ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
 
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
@@ -948,10 +953,12 @@ if __name__ == '__main__':
         ### On whole corpus
         TFIDF_TF_on_whole_corpus(elastic_query_fname=query_fname,
                                  logger=logger,
+                                 save_intermediaire_files=build_classical_tfidf_save_intermediaire_files,
                                  path_for_filesaved=f_path_result_tfidf)
         ### By Country
         TFIDF_TF_with_corpus_state(elastic_query_fname=query_fname,
                                    logger=logger,
+                                   save_intermediaire_files=build_classical_tfidf_save_intermediaire_files
                                    nb_biggest_terms=500,
                                    path_for_filesaved=f_path_result_tfidf_by_locality,
                                    spatial_hiearchy="country",
