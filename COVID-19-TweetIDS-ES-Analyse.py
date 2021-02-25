@@ -147,7 +147,7 @@ def preprocessTweets(text):
     # textclean = re.sub(r'#([^\s]+)', r'\1', textclean)
     return textclean
 
-def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout, logger):
+def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout, save_intermediaire_files, logger):
     """
     Create a matrix of :
         - line : (city,day)
@@ -195,8 +195,9 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
                 continue
         pbar.update(1)
     pbar.close()
-    logger.info("Saving file: matrix of full_text concatenated by day & city: "+str(matrixAggDay_fout))
-    matrixAggDay.to_csv(matrixAggDay_fout)
+    if save_intermediaire_files:
+        logger.info("Saving file: matrix of full_text concatenated by day & city: "+str(matrixAggDay_fout))
+        matrixAggDay.to_csv(matrixAggDay_fout)
 
     # Count terms with sci-kit learn
     cd = CountVectorizer(
@@ -219,8 +220,9 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
     ##initiate matrix with count for each terms
     matrixOccurence = pd.DataFrame(data=countTerms[0:, 0:], index=cityDayList, columns=listOfTerms)
     # save to file
-    logger.info("Saving file: occurence of term: "+str(matrixOccurence_fout))
-    matrixOccurence.to_csv(matrixOccurence_fout)
+    if save_intermediaire_files:
+        logger.info("Saving file: occurence of term: "+str(matrixOccurence_fout))
+        matrixOccurence.to_csv(matrixOccurence_fout)
     return matrixOccurence
 
 
@@ -853,19 +855,20 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
 if __name__ == '__main__':
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = False
+    build_htfidf = True
+    build_htfidf_save_intermediaire_files = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = False
+    build_classical_tfidf = True
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = False
+    build_tsne = True
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = False
+    build_boxplot = True
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = False
+    build_posttraitement_flooding = True
     build_posttraitement_flooding_spatial_levels = ['country', 'state', 'city']
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
     build_clustering = True
@@ -878,7 +881,9 @@ if __name__ == '__main__':
 
     # Global parameters :
     ## Path to results :
-    f_path_result = "elasticsearch/analyse/nldb21/results/4thfeb"
+    f_path_result = "elasticsearch/analyse/nldb21/results/feb"
+    if not os.path.exists(f_path_result):
+        os.makedirs(f_path_result)
     ## Spatial level hierarchie :
     spatialLevels = ['country', 'state', 'city']
     ## Time level hierarchie :
@@ -886,7 +891,7 @@ if __name__ == '__main__':
     ## List of country to work on :
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_4thweekFeb.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
 
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
@@ -910,7 +915,7 @@ if __name__ == '__main__':
         matrixAggDay_fpath = f_path_result_common + "/matrixAggDay.csv"
         matrixOccurence_fpath = f_path_result_common + "/matrixOccurence.csv"
         logger.debug("Build matrix of occurence : start")
-        matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, logger)
+        matrixOccurence = matrixOccurenceBuilder(tweetsByCityAndDate, matrixAggDay_fpath, matrixOccurence_fpath, build_htfidf_save_intermediaire_files, logger)
         logger.debug("Build matrix of occurence : stop")
         ## import matrixOccurence if you don't want to re-build it
         # matrixOccurence = pd.read_csv('elasticsearch/analyse/matrixOccurence.csv', index_col=0)
