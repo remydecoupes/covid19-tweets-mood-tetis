@@ -854,6 +854,55 @@ def post_traitement_flood(biggest, logger, spatialLevel, ratio_of_flood=0.5):
     biggest["user_flooding"] = biggest.progress_apply(lambda t: is_an_user_flooding(t.terms, t[spatialLevel]), axis=1)
     return biggest
 
+def venn(biggest, logger, spatial_level, result_path, locality):
+    """
+    Build Venn diagramm in word_cloud
+    Save fig in result_path
+
+    Discussion about font size :
+    In each subset (common or specific), the font size of term is related with the H-TFIDF Rank inside the subset
+
+    :param biggest:
+    :param logger:
+    :param spatialLevel:
+    :return:
+    """
+    from matplotlib_venn_wordcloud import venn2_wordcloud, venn3_wordcloud
+    import operator
+    # Post-traitement
+    biggest = biggest[biggest["user_flooding"] == "0"]
+    # Select locality
+    biggest = biggest[biggest[spatial_level] == locality]
+    # select week
+    weeks = biggest['date'].unique()
+    if len(weeks) == 2:
+        sets = []
+        weeks_list = []
+        for week in weeks:
+            sets.append(set(biggest[biggest["date"] == week].terms[0:100]))
+            weeks_list.append(week)
+        try:
+            venn = venn2_wordcloud(sets, set_labels=weeks_list, wordcloud_kwargs=dict(min_font_size=10),)
+        except:
+            logger.info("Can't build venn for: "+locality)
+    elif len(weeks) == 3 or len(weeks) > 3:
+        sets = []
+        weeks_list = []
+        word_frequency = {} # for font-size of wordcloud : based on H-TFIDF Rank
+        for nb, week in enumerate(weeks[-3:]):
+            sets.append(set(biggest[biggest["date"] == week].terms[0:100]))
+            weeks_list.append(week)
+            for rank, term in enumerate(biggest[biggest["date"] == week].terms[0:100]):
+                if term not in word_frequency:
+                    word_frequency[term] = (100 - rank)
+        try:
+            venn = venn3_wordcloud(sets, set_labels=weeks_list, word_to_frequency=word_frequency,
+                                   wordcloud_kwargs=dict(min_font_size=4,),)
+        except:
+            logger.info("Can't build venn for: "+locality)
+        sorted_word_frequency = dict(sorted(word_frequency.items(), key=operator.itemgetter(1),reverse=True))
+        logger.info(locality + ": " + str(sorted_word_frequency))
+    plt.savefig(result_path + "/venn_" + locality)
 
 
 if __name__ == '__main__':
@@ -881,10 +930,10 @@ if __name__ == '__main__':
     build_classical_tfidf = False
     build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = True
+    build_tsne = False
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = True
+    build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
@@ -899,6 +948,9 @@ if __name__ == '__main__':
         'state': ["Lombardia", "Lazio"],
         # "city": ["London"]
     }
+    ## Venn diagramm
+    build_venn = True
+    build_venn_spatial_level = "country"
 
     # initialize a logger :
     log_fname = "elasticsearch/analyse/nldb21/logs/nldb21_"
@@ -1124,4 +1176,15 @@ if __name__ == '__main__':
                     except:
                         logger.error("Impossible to cluster for " + spatial_level + "with method: "+method)
 
+    if build_venn:
+        f_path_result_venn = f_path_result + "/venn"
+        if not os.path.exists(f_path_result_venn):
+            os.makedirs(f_path_result_venn)
+        # open result post_traited
+        try:
+            biggest_H_TFIDF = pd.read_csv(f_path_result + "/" + build_venn_spatial_level + "/h-tfidf-Biggest-score-flooding.csv", index_col=0)
+        except:
+            logger.error("Venn: file biggest score doesn't exist")
+        for locality in listOfLocalities:
+            venn(biggest_H_TFIDF, logger, build_venn_spatial_level, f_path_result_venn, locality)
     logger.info("H-TFIDF expirements stops")
