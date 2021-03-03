@@ -630,9 +630,11 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
     tsne_df = pd.DataFrame(low_dim_data, label_tsne)
     tsne_df.columns = ['x', 'y']
     ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
+    plt.setp(ax.get_legend().get_texts(), fontsize='50') # for legend text
+    plt.setp(ax.get_legend().get_title(), fontsize='60')  # for legend title
     plt.ylim(-100,100)
     plt.xlim(-100, 100)
-    ax.set_title('T-SNE BERT Sentence Embeddings for '+plotname)
+    #ax.set_title('T-SNE BERT Sentence Embeddings for '+plotname)
     plt.savefig(paht2save+"/tsne_bert-embeddings_"+plotname)
     logger.info("file: "+paht2save+"/tsne_bert-embeddings_"+plotname+" has been saved.")
     #plt.show()
@@ -879,18 +881,18 @@ if __name__ == '__main__':
     build_classical_tfidf = False
     build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
-    build_tsne = False
+    build_tsne = True
     build_tsne_spatial_level = "country"
     ## eval 3 : Use word_embedding with box plot to show disparity
-    build_boxplot = False
+    build_boxplot = True
     build_boxplot_spatial_level = "country"
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = True
+    build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
-    build_clustering = True
+    build_clustering = False
     build_clustering_spatial_levels = ['country', 'state']
     build_clustering_list_hierachical_locality = {
         "country": ["France", "Deutschland", "España", "Italia", "United Kingdom"],
@@ -1020,9 +1022,9 @@ if __name__ == '__main__':
         fig2, axs2 = plt.subplots(1, 5)
         for i, country in enumerate(listOfLocalities):
             axs2[i].boxplot(similarity_intra_matrix_pairwise(htfidf_embeddings[i*500:(i+1)*500-1]))
-            axs2[i].set_title(country)
+            axs2[i].set_title(country, fontsize=50)
             axs2[i].set_ylim(0, 1)
-        fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
+        # fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
         plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_HTFIDF-country.png")
         # plt.show()
         plt.close(fig2)
@@ -1030,9 +1032,9 @@ if __name__ == '__main__':
         fig3, axs3 = plt.subplots(1, 5)
         for i, country in enumerate(listOfLocalities):
             axs3[i].boxplot(similarity_intra_matrix_pairwise(tfidf_country_embeddings[i*500:(i+1)*500-1]))
-            axs3[i].set_title(country)
+            axs3[i].set_title(country, fontsize=50)
             axs3[i].set_ylim(0, 1)
-        fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
+        # fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
         plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_TFIDF-country.png")
         # plt.show()
         plt.close(fig3)
