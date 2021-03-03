@@ -630,8 +630,8 @@ def t_SNE_bert_embedding_visualization(biggest_score, logger, listOfLocalities="
     tsne_df = pd.DataFrame(low_dim_data, label_tsne)
     tsne_df.columns = ['x', 'y']
     ax = sns.scatterplot(data=tsne_df, x='x', y='y', hue=tsne_df.index)
-    plt.setp(ax.get_legend().get_texts(), fontsize='50') # for legend text
-    plt.setp(ax.get_legend().get_title(), fontsize='60')  # for legend title
+    plt.setp(ax.get_legend().get_texts(), fontsize='40') # for legend text
+    plt.setp(ax.get_legend().get_title(), fontsize='50')  # for legend title
     plt.ylim(-100,100)
     plt.xlim(-100, 100)
     #ax.set_title('T-SNE BERT Sentence Embeddings for '+plotname)
@@ -1022,7 +1022,7 @@ if __name__ == '__main__':
         fig2, axs2 = plt.subplots(1, 5)
         for i, country in enumerate(listOfLocalities):
             axs2[i].boxplot(similarity_intra_matrix_pairwise(htfidf_embeddings[i*500:(i+1)*500-1]))
-            axs2[i].set_title(country, fontsize=50)
+            axs2[i].set_title(country, fontsize=40)
             axs2[i].set_ylim(0, 1)
         # fig2.suptitle("Distribution of similarity by pairs for H-TF-IDF")
         plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_HTFIDF-country.png")
@@ -1032,7 +1032,7 @@ if __name__ == '__main__':
         fig3, axs3 = plt.subplots(1, 5)
         for i, country in enumerate(listOfLocalities):
             axs3[i].boxplot(similarity_intra_matrix_pairwise(tfidf_country_embeddings[i*500:(i+1)*500-1]))
-            axs3[i].set_title(country, fontsize=50)
+            axs3[i].set_title(country, fontsize=40)
             axs3[i].set_ylim(0, 1)
         # fig3.suptitle("Distribution of similarity by pairs for TF-IDF focus on each country")
         plt.savefig(f_path_result_boxplot + "/pairwise-similarity-boxplot_TFIDF-country.png")
