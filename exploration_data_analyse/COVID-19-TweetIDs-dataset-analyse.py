@@ -183,10 +183,11 @@ def heatmap(file_tweets_count, file_bundaries, plot_path):
 
     :param df_tweets_count: Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
     :param bundaries: retrive from mundialis GeoNetwork https://data.mundialis.de/geonetwork/srv/fre/catalog.search#/metadata/10d41695-7f98-45eb-bd71-41ec401aa278
-    :plot_path: where to save
+    :param plot_path: where to save
     :return:
     """
     tweets_count = pd.read_csv(file_tweets_count)
+    tweets_count_trad = pd.DataFrame(columns=["country_english_name", "Count"])
     boundaries_geom = gpd.read_file(file_bundaries)
     # Merge the two dataframes on country name
     tweets_count_geo = boundaries_geom.merge(tweets_count, left_on="NUTS_NAME", right_on="rest_user_osm.country.keyword_Descending")[['geometry', 'Count', 'NUTS_NAME']]
@@ -194,7 +195,13 @@ def heatmap(file_tweets_count, file_bundaries, plot_path):
     tweets_count_geo.Count = tweets_count_geo.Count.astype(int)
     # create the plot :
     tweets_count_geo.plot(column='Count', legend=True)
+    # Add values for each country on plot
+    tweets_count_geo['coords'] = tweets_count_geo['geometry'].apply(lambda x: x.representative_point().coords[:])
+    tweets_count_geo['coords'] = [coords[0] for coords in tweets_count_geo['coords']]
+    for i, row in tweets_count_geo.iterrows():
+        plt.annotate(s=row["Count"], xy=row["coords"])
     # save plot
+    plt.axis('off')
     plt.savefig(plot_path)
     # display plot :
     plt.show()
@@ -208,6 +215,8 @@ if __name__ == '__main__':
     boundaries_file = heatmap_path + "/NUTS_RG_10M_2021_3857_LEVL_0.geojson"
     ## Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
     nb_tweets_file = heatmap_path + '/agile_european-extent.csv'
+    ## Geocoding translatation
+    geocoding_trad = heatmap_path + "/european_country-name_translation.csv"
     ## path to save plot
     plot_path = heatmap_path + "/cloropleth_map_europe_tweeetcountbycountry.png"
     ## Plot :
