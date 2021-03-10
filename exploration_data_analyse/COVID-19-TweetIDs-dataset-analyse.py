@@ -178,24 +178,32 @@ def tweetLocationExtract(geoJsonfile):
         with open(geoJsonfile, 'w') as fout:
             fout.write(json.dumps(geo_data, indent=4))
 
+def heatmap(file_tweets_count, file_bundaries):
+    """
+
+    :param df_tweets_count: Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
+    :param bundaries: retrive from mundialis GeoNetwork https://data.mundialis.de/geonetwork/srv/fre/catalog.search#/metadata/10d41695-7f98-45eb-bd71-41ec401aa278
+    :return:
+    """
+    tweets_count = pd.read_csv(file_tweets_count)
+    boundaries_geom = gpd.read_file(file_bundaries)
+    # Merge the two dataframes on country name
+    tweets_count_geo = boundaries_geom.merge(tweets_count, left_on="NUTS_NAME", right_on="rest_user_osm.country.keyword_Descending")[['geometry', 'Count', 'NUTS_NAME']]
+    # convert tweets content from "object" type to int
+    tweets_count_geo.Count = tweets_count_geo.Count.astype(int)
+    # create the plot :
+    tweets_count_geo.plot(column='Count', legend=True)
+    # display plot) :
+    plt.show()
+
 
 if __name__ == '__main__':
     print("begin")
-    listOfTweetsPerDay = defaultdict()
-    startDate = date(2020, 1, 19)
-    enDate = date(2020, 2, 15)
-
-    ## Count nb of tweets from github echen
-    # plotTweetsFromEchen(startDate, enDate)
-
-    ## Count nb of tweets and retweet from hydrating and extracting
-    plotTweetsAndRT(startDate, enDate)
-
-    ## Stat on location
-    geoJsonfile = 'COVID19_echen_geo_data.json'
-    tweetLocationExtract(geoJsonfile)
-    geodata = gpd.read_file(geoJsonfile)
-    geodata.plot()
-
-
+    # Heatmap : plot a cholopleth maps with nb of tweets by country
+    ## Retrive from Mundialis GeoNetwork : https://data.mundialis.de/geonetwork/srv/fre/catalog.search#/metadata/10d41695-7f98-45eb-bd71-41ec401aa278
+    boundaries_file = "elasticsearch/analyse/geocoding/NUTS_RG_10M_2021_3857_LEVL_0.geojson"
+    ## Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
+    nb_tweets_file = 'elasticsearch/analyse/geocoding/agile_european-extent.csv'
+    ## Plot :
+    heatmap(nb_tweets_file, boundaries_file)
     print("end")

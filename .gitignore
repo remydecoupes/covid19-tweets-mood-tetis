@@ -52,6 +52,10 @@ elasticsearch/analyse/eval12/*
 dataset-analyse
 elasticsearch/analyse/nldb21/
 
+# AGILE
+elasticsearch/analyse/geocoding/NUTS_RG_10M_2021_3857_LEVL_0.geojson
+elasticsearch/analyse/geocoding/agile_european-extent.csv
+
 
 
 # libreoffice swp
