@@ -178,11 +178,12 @@ def tweetLocationExtract(geoJsonfile):
         with open(geoJsonfile, 'w') as fout:
             fout.write(json.dumps(geo_data, indent=4))
 
-def heatmap(file_tweets_count, file_bundaries):
+def heatmap(file_tweets_count, file_bundaries, plot_path):
     """
 
     :param df_tweets_count: Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
     :param bundaries: retrive from mundialis GeoNetwork https://data.mundialis.de/geonetwork/srv/fre/catalog.search#/metadata/10d41695-7f98-45eb-bd71-41ec401aa278
+    :plot_path: where to save
     :return:
     """
     tweets_count = pd.read_csv(file_tweets_count)
@@ -193,17 +194,22 @@ def heatmap(file_tweets_count, file_bundaries):
     tweets_count_geo.Count = tweets_count_geo.Count.astype(int)
     # create the plot :
     tweets_count_geo.plot(column='Count', legend=True)
-    # display plot) :
+    # save plot
+    plt.savefig(plot_path)
+    # display plot :
     plt.show()
 
 
 if __name__ == '__main__':
     print("begin")
     # Heatmap : plot a cholopleth maps with nb of tweets by country
+    heatmap_path = "elasticsearch/analyse/geocoding/"
     ## Retrive from Mundialis GeoNetwork : https://data.mundialis.de/geonetwork/srv/fre/catalog.search#/metadata/10d41695-7f98-45eb-bd71-41ec401aa278
-    boundaries_file = "elasticsearch/analyse/geocoding/NUTS_RG_10M_2021_3857_LEVL_0.geojson"
+    boundaries_file = heatmap_path + "/NUTS_RG_10M_2021_3857_LEVL_0.geojson"
     ## Nb of tweets by european country : retrive with kibana (visualization "agile_european-extent" and then export into csv. Replace ',' for thousand
-    nb_tweets_file = 'elasticsearch/analyse/geocoding/agile_european-extent.csv'
+    nb_tweets_file = heatmap_path + '/agile_european-extent.csv'
+    ## path to save plot
+    plot_path = heatmap_path + "/cloropleth_map_europe_tweeetcountbycountry.png"
     ## Plot :
-    heatmap(nb_tweets_file, boundaries_file)
+    heatmap(nb_tweets_file, boundaries_file, plot_path)
     print("end")
