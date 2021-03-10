@@ -204,7 +204,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         stop_words='english',
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         #min_df=2, # token at least present in 2 cities : reduce size of matrix
-        max_features=50000,
+        max_features=10000,
         ngram_range=(1, 4),
         token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
@@ -915,19 +915,19 @@ if __name__ == '__main__':
     ## List of country to work on :
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_february.txt"
     ## Path to results :
-    period_extent = "feb"
+    period_extent = "whole"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
     if not os.path.exists(f_path_result):
         os.makedirs(f_path_result)
 
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = False
+    build_htfidf = True
     build_htfidf_save_intermediaire_files = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = False
+    build_classical_tfidf = True
     build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
@@ -938,10 +938,10 @@ if __name__ == '__main__':
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = False
+    build_posttraitement_flooding = True
     build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
-    build_clustering = False
+    build_clustering = True
     build_clustering_spatial_levels = ['country', 'state']
     build_clustering_list_hierachical_locality = {
         "country": ["France", "Deutschland", "España", "Italia", "United Kingdom"],
@@ -949,7 +949,7 @@ if __name__ == '__main__':
         # "city": ["London"]
     }
     ## Venn diagramm
-    build_venn = True
+    build_venn = False
     build_venn_spatial_level = "country"
 
     # initialize a logger :
