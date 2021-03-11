@@ -204,7 +204,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         stop_words='english',
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         #min_df=2, # token at least present in 2 cities : reduce size of matrix
-        max_features=10000,
+        max_features=25000,
         ngram_range=(1, 4),
         token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
@@ -305,7 +305,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     ## compute TF : for each doc, devide count by Sum of all count
     ### Sum fo all count by row
     matrixOcc['sumCount'] = matrixOcc.sum(axis=1)
-    ### Devide each cell by these sums
+    ### Devide each cell by these sums
     listOfTerms = matrixOcc.keys()
     matrixOcc = matrixOcc.loc[:, listOfTerms].div(matrixOcc['sumCount'], axis=0)
     ## Compute IDF : create a vector of length = nb of termes with IDF value
@@ -904,6 +904,60 @@ def venn(biggest, logger, spatial_level, result_path, locality):
         logger.info(locality + ": " + str(sorted_word_frequency))
     plt.savefig(result_path + "/venn_" + locality)
 
+def frequent_terms_by_level(matrixOcc, logger, most_frequent_terms_fpath, listOfLocalities='all', spatialLevel='country'):
+    """
+
+    :param matrixOcc:
+    :param most_frequent_terms_fpath:
+    :param listOfLocalities:
+    :param spatialLevel:
+    :return:
+    """
+    matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfLocalities,
+                                     spatialLevel=spatialLevel, period='all')
+
+    # Aggregate by level
+    ## Create 4 new columns : city, State, Country and date
+    def splitindex(row):
+        return row.split("_")
+
+    matrixOcc["city"], matrixOcc["state"], matrixOcc["country"], matrixOcc["date"] = \
+        zip(*matrixOcc.index.map(splitindex))
+
+    matrixOcc.date = pd.to_datetime((matrixOcc.date))  # convert date into datetime
+    if spatialLevel == 'city':
+        matrixOcc = matrixOcc.groupby(["city", pd.Grouper(key="date", freq="Y")]).sum()
+    elif spatialLevel == 'state':
+        matrixOcc = matrixOcc.groupby(["state", pd.Grouper(key="date", freq="Y")]).sum()
+    elif spatialLevel == 'country':
+        matrixOcc = matrixOcc.groupby(["country", pd.Grouper(key="date", freq="Y")]).sum()
+
+    # Export N biggest TF-IDF score:
+    top_n = 500
+    extractBiggest = pd.DataFrame(index=matrixOcc.index, columns=range(0, top_n))
+    for row in matrixOcc.index:
+        try:
+            row_without_zero = matrixOcc.loc[row]# we remove term with a score = 0
+            row_without_zero = row_without_zero[ row_without_zero !=0 ]
+            try:
+                extractBiggest.loc[row] = row_without_zero.nlargest(top_n).keys()
+            except:
+                extractBiggest.loc[row] = row_without_zero.nlargest(len(row_without_zero)).keys()
+        except:
+            logger.debug("H-TFIDF: city " + str(matrixOcc.loc[row].name) + "not enough terms")
+    # Transpose this table in order to share the same structure with TF-IDF classifical biggest score :
+    hbt = pd.DataFrame()
+    extractBiggest = extractBiggest.reset_index()
+    for index, row in extractBiggest.iterrows():
+        hbtrow = pd.DataFrame(row.drop([spatialLevel, "date"]).values, columns=["terms"])
+        hbtrow[spatialLevel] = row[spatialLevel]
+        hbtrow["date"] = row["date"]
+        hbt = hbt.append(hbtrow, ignore_index=True)
+
+    # save file
+    logger.info("saving file: "+most_frequent_terms_fpath)
+    hbt.to_csv(most_frequent_terms_fpath)
+
 
 if __name__ == '__main__':
     # Global parameters :
@@ -915,19 +969,19 @@ if __name__ == '__main__':
     ## List of country to work on :
     listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_february.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
-    period_extent = "whole"
+    period_extent = "feb"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
     if not os.path.exists(f_path_result):
         os.makedirs(f_path_result)
 
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
-    build_htfidf = True
+    build_htfidf = False
     build_htfidf_save_intermediaire_files = False
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = True
+    build_classical_tfidf = False
     build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
@@ -935,13 +989,17 @@ if __name__ == '__main__':
     ## eval 3 : Use word_embedding with box plot to show disparity
     build_boxplot = False
     build_boxplot_spatial_level = "country"
+    ## eval 4 : Compare H-TFIDF and TF-IDF with most frequent terms by level
+    build_compare_measures = True
+    build_compare_measures_level = "country"
+    build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = True
+    build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
-    build_clustering = True
+    build_clustering = False
     build_clustering_spatial_levels = ['country', 'state']
     build_clustering_list_hierachical_locality = {
         "country": ["France", "Deutschland", "España", "Italia", "United Kingdom"],
@@ -1017,6 +1075,19 @@ if __name__ == '__main__':
                                    path_for_filesaved=f_path_result_tfidf_by_locality,
                                    spatial_hiearchy="country",
                                    temporal_period='all')
+
+    if build_compare_measures:
+        f_path_result_compare_meassures_dir = f_path_result+"/common"
+        f_path_result_compare_meassures_file = \
+            f_path_result_compare_meassures_dir + "/most_frequent_terms_by_" + build_compare_measures_level + ".csv"
+        if not os.path.exists(f_path_result_compare_meassures_dir):
+            os.makedirs(f_path_result_compare_meassures_dir)
+        # open Matrix of occurence:
+        try:
+            matrixOccurence = pd.read_csv(f_path_result_compare_meassures_dir + '/matrixOccurence.csv', index_col=0)
+        except:
+            logger.error("File: " + f_path_result_compare_meassures_dir + '/matrixOccurence.csv' + "doesn't exist. You may need to save intermediate file for H-TFIDF")
+        frequent_terms_by_level(matrixOccurence, logger, f_path_result_compare_meassures_file, build_compare_measures_localities, build_compare_measures_level)
 
     if build_tsne :
         f_path_result_tsne = f_path_result+"/tsne"
