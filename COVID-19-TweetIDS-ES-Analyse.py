@@ -33,6 +33,9 @@ import scipy.spatial as sp
 # Spatial entity as descriptor :
 from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
+# venn
+from matplotlib_venn_wordcloud import venn2_wordcloud, venn3_wordcloud
+import operator
 
 # Global var on Levels on spatial and temporal axis
 spatialLevels = ['city', 'state', 'country']
@@ -243,13 +246,13 @@ def spatiotemporelFilter(matrix, listOfcities='all', spatialLevel='city', period
     # Extract cities and period
     ## cities
     if listOfcities != 'all':  ### we need to filter
-        ### Initiate a numpy array of False
+        ###Initiate a numpy array of False
         filter = np.zeros((1, len(matrix.index)), dtype=bool)[0]
         for city in listOfcities:
             ### edit filter if index contains the city (for each city of the list)
             filter += matrix.index.str.startswith(str(city) + "_")
         matrix = matrix.loc[filter]
-    ## period
+    ##period
     if str(period) != 'all':  ### we need a filter on date
         datefilter = np.zeros((1, len(matrix.index)), dtype=bool)[0]
         for date in period:
@@ -867,8 +870,6 @@ def venn(biggest, logger, spatial_level, result_path, locality):
     :param spatialLevel:
     :return:
     """
-    from matplotlib_venn_wordcloud import venn2_wordcloud, venn3_wordcloud
-    import operator
     # Post-traitement
     biggest = biggest[biggest["user_flooding"] == "0"]
     # Select locality
@@ -913,8 +914,8 @@ def frequent_terms_by_level(matrixOcc, logger, most_frequent_terms_fpath, listOf
     :param spatialLevel:
     :return:
     """
-    matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfLocalities,
-                                     spatialLevel=spatialLevel, period='all')
+    #matrixOcc = spatiotemporelFilter(matrix=matrixOcc, listOfcities=listOfLocalities,
+    #                                 spatialLevel=spatialLevel, period='all')
 
     # Aggregate by level
     ## Create 4 new columns : city, State, Country and date
@@ -957,6 +958,42 @@ def frequent_terms_by_level(matrixOcc, logger, most_frequent_terms_fpath, listOf
     # save file
     logger.info("saving file: "+most_frequent_terms_fpath)
     hbt.to_csv(most_frequent_terms_fpath)
+    return hbt
+
+def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, frequent_terms, logger, plot_f_out, listOfCountries="all"):
+
+    # Open dataframes
+    htfidf = pd.read_csv(htfidf_f, index_col=0)
+    tfidf = pd.read_csv(tfidf_corpus_contry_f, index_col=0)
+    # loop on countries
+    for country in listOfCountries:
+        # barchart building
+        barchart_df = pd.DataFrame(index=range(1))
+        sets = []
+        htfidf_country = htfidf[htfidf["country"] == country]
+        tfidf_country = tfidf[tfidf["country"] == country]
+        frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
+        # loop on weeks
+        for week in htfidf_country.date.unique():
+            htfidf_country_week = htfidf_country[htfidf_country["date"] == week]
+            # build on venn comparison H-TFIDF with Frequent terms
+            sets = []
+            sets.append(set(htfidf_country_week.terms[0:100]))
+            sets.append(set(frequent_terms_country.terms[0:100]))
+            venn_htfidf = venn2_wordcloud(sets)
+            barchart_df['H-TFIDF_'+country+'_'+str(week)] = len(venn_htfidf.get_words_by_id('11'))
+        # build on venn comparison HTFIDF with Frequent terms
+        sets = []
+        sets.append(set(tfidf_country.terms[0:100]))
+        sets.append(set(frequent_terms_country.terms[0:100]))
+        logger.info(country)
+        venn_tfidf = venn2_wordcloud(sets)
+        plt.close('all')
+        barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
+        barlist = barchart_df.plot.bar()
+        # barlist[-1].set_color('r')
+        plt.show()
+        plt.savefig(plot_f_out + "_" + country + ".png")
 
 
 if __name__ == '__main__':
@@ -979,7 +1016,7 @@ if __name__ == '__main__':
     # Workflow parameters :
     ## Rebuild H-TFIDF (with Matrix Occurence)
     build_htfidf = False
-    build_htfidf_save_intermediaire_files = False
+    build_htfidf_save_intermediaire_files = True
     ## eval 1 : Comparison with classical TF-IDf
     build_classical_tfidf = False
     build_classical_tfidf_save_intermediaire_files = False
@@ -1080,6 +1117,8 @@ if __name__ == '__main__':
         f_path_result_compare_meassures_dir = f_path_result+"/common"
         f_path_result_compare_meassures_file = \
             f_path_result_compare_meassures_dir + "/most_frequent_terms_by_" + build_compare_measures_level + ".csv"
+        f_path_result_compare_meassures_plot = \
+            f_path_result_compare_meassures_dir + "/most_frequent_terms_by_" + build_compare_measures_level
         if not os.path.exists(f_path_result_compare_meassures_dir):
             os.makedirs(f_path_result_compare_meassures_dir)
         # open Matrix of occurence:
@@ -1087,7 +1126,13 @@ if __name__ == '__main__':
             matrixOccurence = pd.read_csv(f_path_result_compare_meassures_dir + '/matrixOccurence.csv', index_col=0)
         except:
             logger.error("File: " + f_path_result_compare_meassures_dir + '/matrixOccurence.csv' + "doesn't exist. You may need to save intermediate file for H-TFIDF")
-        frequent_terms_by_level(matrixOccurence, logger, f_path_result_compare_meassures_file, build_compare_measures_localities, build_compare_measures_level)
+        ft = frequent_terms_by_level(matrixOccurence, logger, f_path_result_compare_meassures_file, build_compare_measures_localities, build_compare_measures_level)
+        # files_path
+        htfidf_f = f_path_result + "/country/h-tfidf-Biggest-score.csv"
+        tfidf_corpus_contry_f = f_path_result + "/tf-idf-classical/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv"
+        comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, ft, logger,
+                                              f_path_result_compare_meassures_plot,
+                                              listOfCountries=build_compare_measures_localities)
 
     if build_tsne :
         f_path_result_tsne = f_path_result+"/tsne"
