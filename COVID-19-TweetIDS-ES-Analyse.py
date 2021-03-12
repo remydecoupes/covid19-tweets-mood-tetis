@@ -323,7 +323,7 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     idf = np.log(N / DFt)
     ## compute TF-IDF
     matrixTFIDF = matrixOcc * idf
-    ## remove terms if for all documents value are Nan
+    ## remove terms if for all documents value are Nan
     matrixTFIDF.dropna(axis=1, how='all', inplace=True)
 
     # Save file
@@ -990,10 +990,15 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, frequ
         venn_tfidf = venn2_wordcloud(sets)
         plt.close('all')
         barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
-        barlist = barchart_df.plot.bar()
-        # barlist[-1].set_color('r')
-        plt.show()
+        if len(barchart_df.keys()) == 4:
+            barchart_df.plot.bar(color=["forestgreen", "limegreen", "lime", "red"])
+        elif len(barchart_df.keys()) == 6:
+            barchart_df.plot.bar(color=["darkgreen", "green", "forestgreen", "limegreen", "lime", "red"])
+        else:
+            logger.error("function in dev, only work with 3 or 5 weeks, "+ str(len(barchart_df.keys()) - 1 ) + "weeks return")
+        plt.xticks(barchart_df.index, " ")
         plt.savefig(plot_f_out + "_" + country + ".png")
+        # plt.show()
 
 
 if __name__ == '__main__':
