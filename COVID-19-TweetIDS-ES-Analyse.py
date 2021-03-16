@@ -997,6 +997,8 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
         # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
         tfidf_overlap = len(venn_tfidf.get_words_by_id('11'))
         # build the row for barchart
+        if country == "Ἑλλάς":
+            country = "Greece"
         row = {"country": country, "h-tfidf": mean_htfidf_overlap_per_week_df, "tf-idf": tfidf_overlap}
         barchart_df = barchart_df.append(row, ignore_index=True)
     # Plot bar chart
@@ -1017,7 +1019,7 @@ if __name__ == '__main__':
     ## Time level hierarchie :
     timeLevel = "week"
     ## List of country to work on :
-    listOfLocalities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+    listOfLocalities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "United Kingdom"]
     ## elastic query :
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
@@ -1043,7 +1045,7 @@ if __name__ == '__main__':
     build_compare_measures = True
     build_compare_measures_build_intermedate_files = False
     build_compare_measures_level = "country"
-    build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
+    build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "Portugal", "United Kingdom"]
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
