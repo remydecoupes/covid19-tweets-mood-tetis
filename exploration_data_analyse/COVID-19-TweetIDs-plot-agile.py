@@ -6,8 +6,8 @@ from wordcloud import WordCloud
 
 if __name__ == '__main__':
     # Generate wordcloud for Greece
-    dir = "elasticsearch/analyse/nldb21/results/feb_week/country"
-    dir_out = "elasticsearch/analyse/nldb21/results/feb_week/country/wordcloud"
+    dir = "elasticsearch/analyse/nldb21/results/feb_idf_square_week/country"
+    dir_out = "elasticsearch/analyse/nldb21/results/feb_idf_square_week/country/wordcloud"
     list_of_greece_name = ["Greece", "Ελλάς", "Ἑλλάς"]
     list_of_greece_name = ["Greece", "Ἑλλάς"]
     list_of_greece_week = ["2020-02-02", "2020-02-09", "2020-02-16", "2020-02-23"]

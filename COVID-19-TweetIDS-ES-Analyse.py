@@ -208,7 +208,7 @@ def matrixOccurenceBuilder(tweetsofcity, matrixAggDay_fout, matrixOccurence_fout
         #preprocessor=sklearn_vectorizer_no_number_preprocessor,
         #min_df=2, # token at least present in 2 cities : reduce size of matrix
         max_features=25000,
-        ngram_range=(1, 4),
+        ngram_range=(1, 1),
         token_pattern='[a-zA-Z0-9#@]+', #remove user name, i.e term starting with @ for personnal data issue
         # strip_accents= "ascii" # remove token with special character (trying to keep only english word)
     )
@@ -320,9 +320,11 @@ def HTFIDF(matrixOcc, matrixHTFIDF_fname, biggestHTFIDFscore_fname, listOfcities
     #### Not a Number when value 0 because otherwise log is infinite
     DFt.replace(0, np.nan, inplace=True)
     ### compute log(N/DFt)
-    idf = np.log(N / DFt)
+    idf = np.log10(N / (DFt))
+    # idf = np.log10( N / (DFt * 10))
     ## compute TF-IDF
     matrixTFIDF = matrixOcc * idf
+    # matrixTFIDF = matrixOcc * idf * idf
     ## remove terms if for all documents value are Nan
     matrixTFIDF.dropna(axis=1, how='all', inplace=True)
 
@@ -1013,7 +1015,7 @@ if __name__ == '__main__':
     ## elastic query :
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
-    period_extent = "feb"
+    period_extent = "feb_idf_square"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
     if not os.path.exists(f_path_result):
         os.makedirs(f_path_result)
@@ -1032,13 +1034,13 @@ if __name__ == '__main__':
     build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## eval 4 : Compare H-TFIDF and TF-IDF with most frequent terms by level
-    build_compare_measures = True
+    build_compare_measures = False
     build_compare_measures_level = "country"
     build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = False
+    build_posttraitement_flooding = True
     build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
     build_clustering = False
