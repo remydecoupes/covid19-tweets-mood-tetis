@@ -968,7 +968,7 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
     htfidf = pd.read_csv(htfidf_f, index_col=0)
     tfidf = pd.read_csv(tfidf_corpus_country_f, index_col=0)
     # barchart building
-    barchart_df_col = ["country", "htfidf", "tfidf"]
+    barchart_df_col = ["country", "h-tfidf", "tf-idf"]
     barchart_df = pd.DataFrame(columns=barchart_df_col, index=range(len(listOfCountries)))
     # loop on countries
     for country in listOfCountries:
@@ -997,7 +997,7 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
         # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
         tfidf_overlap = len(venn_tfidf.get_words_by_id('11'))
         # build the row for barchart
-        row = {"country": country, "htfidf": mean_htfidf_overlap_per_week_df, "tfidf": tfidf_overlap}
+        row = {"country": country, "h-tfidf": mean_htfidf_overlap_per_week_df, "tf-idf": tfidf_overlap}
         barchart_df = barchart_df.append(row, ignore_index=True)
     # Plot bar chart
     barchart_df = barchart_df.set_index("country")
