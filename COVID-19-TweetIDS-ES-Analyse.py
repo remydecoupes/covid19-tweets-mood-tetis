@@ -429,7 +429,7 @@ def TFIDF_TF_with_corpus_state(elastic_query_fname, logger, save_intermediaire_f
             stop_words='english',
             min_df=0.001,
             # max_features=50000,
-            ngram_range=(1, 4),
+            ngram_range=(1, 1),
             token_pattern='[a-zA-Z0-9#@]+',
         )
         # logger.info("Compute TF-IDF on corpus = "+spatial_hiearchy)
@@ -548,7 +548,7 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, save_intermediaire_fil
         stop_words='english',
         min_df=0.001,
         # max_features=50000,
-        ngram_range=(1, 4),
+        ngram_range=(1, 1),
         token_pattern='[a-zA-Z0-9#]+', #remove user name, i.e term starting with @ for personnal data issue
     )
     try:
@@ -962,20 +962,21 @@ def frequent_terms_by_level(matrixOcc, logger, most_frequent_terms_fpath, listOf
     hbt.to_csv(most_frequent_terms_fpath)
     return hbt
 
-def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, frequent_terms, logger, plot_f_out, listOfCountries="all"):
+def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, frequent_terms, logger, plot_f_out, listOfCountries="all"):
 
     # Open dataframes
     htfidf = pd.read_csv(htfidf_f, index_col=0)
-    tfidf = pd.read_csv(tfidf_corpus_contry_f, index_col=0)
+    tfidf = pd.read_csv(tfidf_corpus_country_f, index_col=0)
+    # barchart building
+    barchart_df_col = ["country", "htfidf", "tfidf"]
+    barchart_df = pd.DataFrame(columns=barchart_df_col, index=range(len(listOfCountries)))
     # loop on countries
     for country in listOfCountries:
-        # barchart building
-        barchart_df = pd.DataFrame(index=range(1))
-        sets = []
         htfidf_country = htfidf[htfidf["country"] == country]
         tfidf_country = tfidf[tfidf["country"] == country]
         frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
         # loop on weeks
+        htfidf_overlap_per_week_df = pd.DataFrame(index=range(1))
         for week in htfidf_country.date.unique():
             htfidf_country_week = htfidf_country[htfidf_country["date"] == week]
             # build on venn comparison H-TFIDF with Frequent terms
@@ -983,24 +984,29 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, frequ
             sets.append(set(htfidf_country_week.terms[0:100]))
             sets.append(set(frequent_terms_country.terms[0:100]))
             venn_htfidf = venn2_wordcloud(sets)
-            barchart_df['H-TFIDF_'+country+'_'+str(week)] = len(venn_htfidf.get_words_by_id('11'))
-        # build on venn comparison HTFIDF with Frequent terms
+            htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
+        # mean value for all weeks :
+        mean_htfidf_overlap_per_week_df = htfidf_overlap_per_week_df.mean(axis=1).iloc[0]
+        # Compute TF-IDF overlap with Frequent termes
         sets = []
         sets.append(set(tfidf_country.terms[0:100]))
         sets.append(set(frequent_terms_country.terms[0:100]))
         logger.info(country)
         venn_tfidf = venn2_wordcloud(sets)
         plt.close('all')
-        barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
-        if len(barchart_df.keys()) == 4:
-            barchart_df.plot.bar(color=["forestgreen", "limegreen", "lime", "red"])
-        elif len(barchart_df.keys()) == 6:
-            barchart_df.plot.bar(color=["darkgreen", "green", "forestgreen", "limegreen", "lime", "red"])
-        else:
-            logger.error("function in dev, only work with 3 or 5 weeks, "+ str(len(barchart_df.keys()) - 1 ) + "weeks return")
-        plt.xticks(barchart_df.index, " ")
-        plt.savefig(plot_f_out + "_" + country + ".png")
-        # plt.show()
+        # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
+        tfidf_overlap = len(venn_tfidf.get_words_by_id('11'))
+        # build the row for barchart
+        row = {"country": country, "htfidf": mean_htfidf_overlap_per_week_df, "tfidf": tfidf_overlap}
+        barchart_df = barchart_df.append(row, ignore_index=True)
+    # Plot bar chart
+    barchart_df = barchart_df.set_index("country")
+    barchart_df = barchart_df.dropna()
+    barchart_df.plot.bar(figsize=(8,6))
+    plt.subplots_adjust(bottom=0.27)
+    plt.ylabel("% overlap between H-TFIDF / TF-IDF with most frequent terms")
+    plt.savefig(plot_f_out + ".png")
+    # plt.show()
 
 
 if __name__ == '__main__':
@@ -1015,7 +1021,7 @@ if __name__ == '__main__':
     ## elastic query :
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
-    period_extent = "feb_idf_square"
+    period_extent = "feb"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
     if not os.path.exists(f_path_result):
         os.makedirs(f_path_result)
@@ -1034,13 +1040,14 @@ if __name__ == '__main__':
     build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## eval 4 : Compare H-TFIDF and TF-IDF with most frequent terms by level
-    build_compare_measures = False
+    build_compare_measures = True
+    build_compare_measures_build_intermedate_files = False
     build_compare_measures_level = "country"
     build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "United Kingdom"]
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
-    build_posttraitement_flooding = True
+    build_posttraitement_flooding = False
     build_posttraitement_flooding_spatial_levels = spatialLevels
     ##  Analyse H-TFIDF for epidemiology 1 : clustering
     build_clustering = False
@@ -1133,7 +1140,11 @@ if __name__ == '__main__':
             matrixOccurence = pd.read_csv(f_path_result_compare_meassures_dir + '/matrixOccurence.csv', index_col=0)
         except:
             logger.error("File: " + f_path_result_compare_meassures_dir + '/matrixOccurence.csv' + "doesn't exist. You may need to save intermediate file for H-TFIDF")
-        ft = frequent_terms_by_level(matrixOccurence, logger, f_path_result_compare_meassures_file, build_compare_measures_localities, build_compare_measures_level)
+        logger.info("Retrieve frequent terms per country")
+        if build_compare_measures_build_intermedate_files:
+            ft = frequent_terms_by_level(matrixOccurence, logger, f_path_result_compare_meassures_file, build_compare_measures_localities, build_compare_measures_level)
+        else:
+            ft = pd.read_csv(f_path_result_compare_meassures_file)
         # files_path
         htfidf_f = f_path_result + "/country/h-tfidf-Biggest-score.csv"
         tfidf_corpus_contry_f = f_path_result + "/tf-idf-classical/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv"
