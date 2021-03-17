@@ -983,8 +983,11 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
             sets = []
             sets.append(set(htfidf_country_week.terms[0:100]))
             sets.append(set(frequent_terms_country.terms[0:100]))
-            venn_htfidf = venn2_wordcloud(sets)
-            htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
+            try:
+                venn_htfidf = venn2_wordcloud(sets)
+                htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
+            except:
+                htfidf_overlap_per_week_df[week] = np.NAN
         # mean value for all weeks :
         mean_htfidf_overlap_per_week_df = htfidf_overlap_per_week_df.mean(axis=1).iloc[0]
         # Compute TF-IDF overlap with Frequent termes
@@ -1019,7 +1022,7 @@ if __name__ == '__main__':
     ## Time level hierarchie :
     timeLevel = "week"
     ## List of country to work on :
-    listOfLocalities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "United Kingdom"]
+    listOfLocalities = ["Deutschland", "España", "France", "Italia", "United Kingdom"]
     ## elastic query :
     query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
@@ -1045,7 +1048,7 @@ if __name__ == '__main__':
     build_compare_measures = True
     build_compare_measures_build_intermedate_files = False
     build_compare_measures_level = "country"
-    build_compare_measures_localities = ["France", "Deutschland", "España", "Italia", "Portugal", "United Kingdom"]
+    build_compare_measures_localities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "Portugal", "United Kingdom"]
     ## post-traitement 1 : geocode term
     build_posttraitement_geocode = False
     ## post-traitement 2 : remove terms form a flooding user
