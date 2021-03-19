@@ -967,51 +967,86 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
     # Open dataframes
     htfidf = pd.read_csv(htfidf_f, index_col=0)
     tfidf = pd.read_csv(tfidf_corpus_country_f, index_col=0)
-    # barchart building
-    barchart_df_col = ["country", "h-tfidf", "tf-idf"]
-    barchart_df = pd.DataFrame(columns=barchart_df_col, index=range(len(listOfCountries)))
-    # loop on countries
-    for country in listOfCountries:
-        htfidf_country = htfidf[htfidf["country"] == country]
-        tfidf_country = tfidf[tfidf["country"] == country]
-        frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
-        # loop on weeks
-        htfidf_overlap_per_week_df = pd.DataFrame(index=range(1))
-        for week in htfidf_country.date.unique():
-            htfidf_country_week = htfidf_country[htfidf_country["date"] == week]
-            # build on venn comparison H-TFIDF with Frequent terms
+    for nb_terms in [100, 200, 500]:
+        # barchart building
+        barchart_df_col = ["country", "h-tfidf", "tf-idf"]
+        barchart_df = pd.DataFrame(columns=barchart_df_col, index=range(len(listOfCountries)))
+        # loop on countries
+        for country in listOfCountries:
+            htfidf_country = htfidf[htfidf["country"] == country]
+            tfidf_country = tfidf[tfidf["country"] == country]
+            frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
+            # loop on weeks
+            htfidf_overlap_per_week_df = pd.DataFrame(index=range(1))
+            for week in htfidf_country.date.unique():
+                htfidf_country_week = htfidf_country[htfidf_country["date"] == week]
+                # build on venn comparison H-TFIDF with Frequent terms
+                sets = []
+                sets.append(set(htfidf_country_week.terms[0:nb_terms]))
+                sets.append(set(frequent_terms_country.terms[0:nb_terms]))
+                try:
+                    venn_htfidf = venn2_wordcloud(sets)
+                    htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
+                except:
+                    htfidf_overlap_per_week_df[week] = np.NAN
+            # mean value for all weeks :
+            mean_htfidf_overlap_per_week_df = htfidf_overlap_per_week_df.mean(axis=1).iloc[0] * 100 / nb_terms
+            # Compute TF-IDF overlap with Frequent termes
             sets = []
-            sets.append(set(htfidf_country_week.terms[0:100]))
-            sets.append(set(frequent_terms_country.terms[0:100]))
-            try:
-                venn_htfidf = venn2_wordcloud(sets)
-                htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
-            except:
-                htfidf_overlap_per_week_df[week] = np.NAN
-        # mean value for all weeks :
-        mean_htfidf_overlap_per_week_df = htfidf_overlap_per_week_df.mean(axis=1).iloc[0]
-        # Compute TF-IDF overlap with Frequent termes
-        sets = []
-        sets.append(set(tfidf_country.terms[0:100]))
-        sets.append(set(frequent_terms_country.terms[0:100]))
-        logger.info(country)
-        venn_tfidf = venn2_wordcloud(sets)
-        plt.close('all')
-        # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
-        tfidf_overlap = len(venn_tfidf.get_words_by_id('11'))
-        # build the row for barchart
-        if country == "Ἑλλάς":
-            country = "Greece"
-        row = {"country": country, "h-tfidf": mean_htfidf_overlap_per_week_df, "tf-idf": tfidf_overlap}
-        barchart_df = barchart_df.append(row, ignore_index=True)
-    # Plot bar chart
-    barchart_df = barchart_df.set_index("country")
-    barchart_df = barchart_df.dropna()
-    barchart_df.plot.bar(figsize=(8,6))
-    plt.subplots_adjust(bottom=0.27)
-    plt.ylabel("% overlap between H-TFIDF / TF-IDF with most frequent terms")
-    plt.savefig(plot_f_out + ".png")
-    # plt.show()
+            sets.append(set(tfidf_country.terms[0:nb_terms]))
+            sets.append(set(frequent_terms_country.terms[0:nb_terms]))
+            logger.info(country)
+            venn_tfidf = venn2_wordcloud(sets)
+            plt.close('all')
+            # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
+            tfidf_overlap = len(venn_tfidf.get_words_by_id('11')) * 100 / nb_terms
+            # build the row for barchart
+            if country == "Ἑλλάς":
+                country = "Greece"
+            row = {"country": country, "h-tfidf": mean_htfidf_overlap_per_week_df, "tf-idf": tfidf_overlap}
+            barchart_df = barchart_df.append(row, ignore_index=True)
+        # Plot bar chart
+        barchart_df = barchart_df.set_index("country")
+        barchart_df = barchart_df.dropna()
+        barchart_df.plot.bar(figsize=(8,6))
+        plt.subplots_adjust(bottom=0.27)
+        plt.ylabel("% overlap between H-TFIDF / TF-IDF with most frequent terms")
+        plt.savefig(plot_f_out + "_" + str(nb_terms) + ".png")
+
+    # build venn diagramm
+    ## Choose a country
+    country = "United Kingdom"
+    nb_terms = 100
+    week = "2020-01-26"
+    ## Filtering matrix to keep TOP15 terms without term with 1 caracter or digital number
+    htfidf_country = htfidf[(htfidf["country"] == country) & (htfidf["date"] == week)]
+    tfidf_country = tfidf[tfidf["country"] == country]
+    frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
+    htfidf_country = htfidf_country[htfidf_country["terms"].map(len) > 3]
+    tfidf_country = tfidf_country[tfidf_country["terms"].map(len) > 3]
+    frequent_terms_country = frequent_terms_country[frequent_terms_country["terms"].map(len) > 3]
+    ### Remove number
+    htfidf_country_terms = htfidf_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    tfidf_country_terms = tfidf_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    frequent_terms_country_terms = frequent_terms_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    columns_name = []
+    for i in range(15):
+        columns_name.append("rank "+str(i))
+    latex_table_nb_terms = 30
+    latex_table = pd.DataFrame(index=range(3), columns=columns_name)
+    latex_table.loc["H-TFIDF"] = htfidf_country_terms.head(latex_table_nb_terms).values
+    latex_table.loc["TF-IDF"] = tfidf_country_terms.head(latex_table_nb_terms).values
+    latex_table.loc["Frequent terms"] = frequent_terms_country_terms.head(latex_table_nb_terms).values
+    print(latex_table.T[["H-TFIDF", "TF-IDF", "Frequent terms"]].to_latex(index=False))
+    sets = []
+    sets.append(set(htfidf_country_terms))
+    sets.append(set(tfidf_country_terms))
+    sets.append(set(frequent_terms_country_terms))
+    fig, ax = plt.subplots(figsize=(8, 6))
+    venn_3 = venn3_wordcloud(sets, set_labels=["H-TFIDF", "TF-IDF", "Frequent terms"], ax=ax)
+    plt.savefig(plot_f_out + "_"+ country + "venn3.png")
+    plt.show()
+
 
 
 if __name__ == '__main__':
