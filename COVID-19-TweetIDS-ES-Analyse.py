@@ -531,8 +531,11 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, save_intermediaire_fil
     for tweetByCity in tweets.keys():
         # Filter cities :
         city = str(tweetByCity).split("_")[0]
+        state = str(tweetByCity).split("_")[1]
+        country = str(tweetByCity).split("_")[2]
         if city in listOfCities:
             matrix = pd.DataFrame(tweets[tweetByCity])
+            matrix["country"] = country
             matrixAllTweets = matrixAllTweets.append(matrix, ignore_index=True)
 
     # Split datetime into date and time
@@ -561,15 +564,32 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, save_intermediaire_fil
         exit(-1)
     ## matrixTFIDF
     TFIDFClassical = pd.DataFrame(denselist, columns=feature_names)
+    TFIDFClassical["country"] = matrixAllTweets["country"]
     if save_intermediaire_files:
         logger.info("saving TF-IDF File: "+path_for_filesaved+"/tfidf_on_whole_corpus.csv")
         TFIDFClassical.to_csv(path_for_filesaved+"/tfidf_on_whole_corpus.csv")
+
+    extractBiggest = pd.DataFrame()
+    for term in TFIDFClassical.keys():
+        try:
+            index = TFIDFClassical[term].idxmax()
+
+            score = TFIDFClassical[term].max()
+            country = TFIDFClassical.iloc[index]["country"]
+            row = {
+                'terms': term,
+                'score': score,
+                'country': country
+            }
+            extractBiggest = extractBiggest.append(row, ignore_index=True)
+        except:
+            logger.info(term+' : '+str(index)+" : "+str(score)+" : "+country)
     ## Extract N TOP ranking score
-    extractBiggest = TFIDFClassical.max()
+    # extractBiggest = TFIDFClassical.max()
     extractBiggest = extractBiggest[extractBiggest == 1] # we keep only term with high score TF-IDF, i.e 1.0
-    extractBiggest = extractBiggest.to_frame()
-    extractBiggest = extractBiggest.reset_index()
-    extractBiggest.columns = ['terms', 'score']
+    # extractBiggest = extractBiggest.to_frame()
+    # extractBiggest = extractBiggest.reset_index()
+    # extractBiggest.columns = ['terms', 'score', 'country']
 
     logger.info("saving  TF-IDF top"+str(extractBiggest['terms'].size)+" biggest score")
     extractBiggest.to_csv(path_for_filesaved+"/TFIDF_BiggestScore_on_whole_corpus.csv")
@@ -1030,9 +1050,9 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
     tfidf_country_terms = tfidf_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
     frequent_terms_country_terms = frequent_terms_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
     columns_name = []
-    for i in range(15):
-        columns_name.append("rank "+str(i))
     latex_table_nb_terms = 30
+    for i in range(latex_table_nb_terms):
+        columns_name.append("rank "+str(i))
     latex_table = pd.DataFrame(index=range(3), columns=columns_name)
     latex_table.loc["H-TFIDF"] = htfidf_country_terms.head(latex_table_nb_terms).values
     latex_table.loc["TF-IDF"] = tfidf_country_terms.head(latex_table_nb_terms).values
@@ -1059,9 +1079,9 @@ if __name__ == '__main__':
     ## List of country to work on :
     listOfLocalities = ["Deutschland", "España", "France", "Italia", "United Kingdom"]
     ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
     ## Path to results :
-    period_extent = "feb"
+    period_extent = "feb_tfidf_whole"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
     if not os.path.exists(f_path_result):
         os.makedirs(f_path_result)
@@ -1071,8 +1091,8 @@ if __name__ == '__main__':
     build_htfidf = False
     build_htfidf_save_intermediaire_files = True
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = False
-    build_classical_tfidf_save_intermediaire_files = False
+    build_classical_tfidf = True
+    build_classical_tfidf_save_intermediaire_files = True
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
     build_tsne_spatial_level = "country"
@@ -1080,7 +1100,7 @@ if __name__ == '__main__':
     build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## eval 4 : Compare H-TFIDF and TF-IDF with most frequent terms by level
-    build_compare_measures = True
+    build_compare_measures = False
     build_compare_measures_build_intermedate_files = False
     build_compare_measures_level = "country"
     build_compare_measures_localities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "Portugal", "United Kingdom"]
