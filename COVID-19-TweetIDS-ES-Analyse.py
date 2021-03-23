@@ -586,7 +586,7 @@ def TFIDF_TF_on_whole_corpus(elastic_query_fname, logger, save_intermediaire_fil
             logger.info(term+' : '+str(index)+" : "+str(score)+" : "+country)
     ## Extract N TOP ranking score
     # extractBiggest = TFIDFClassical.max()
-    extractBiggest = extractBiggest[extractBiggest == 1] # we keep only term with high score TF-IDF, i.e 1.0
+    extractBiggest = extractBiggest[extractBiggest['score'] == 1] # we keep only term with high score TF-IDF, i.e 1.0
     # extractBiggest = extractBiggest.to_frame()
     # extractBiggest = extractBiggest.reset_index()
     # extractBiggest.columns = ['terms', 'score', 'country']
@@ -1067,6 +1067,108 @@ def comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_country_f, freq
     plt.savefig(plot_f_out + "_"+ country + "venn3.png")
     plt.show()
 
+def comparison_htfidf_tfidfwhole_frequentterms(htfidf_f, tfidf_whole_f, frequent_terms, logger, plot_f_out, listOfCountries="all"):
+
+    # Open dataframes
+    htfidf = pd.read_csv(htfidf_f, index_col=0)
+    tfidf = pd.read_csv(tfidf_whole_f, index_col=0)
+    for nb_terms in [100, 200, 500]:
+        # barchart building
+        barchart_df_col = ["country", "h-tfidf", "tf-idf"]
+        barchart_df = pd.DataFrame(columns=barchart_df_col, index=range(len(listOfCountries)))
+        # loop on countries
+        for country in listOfCountries:
+            # build_compare_measures_localities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "Portugal", "United Kingdom"]
+            if country == "Ἑλλάς":
+                htfidf_country = htfidf[(htfidf["country"] == country) | (htfidf["country"] == "Greece")]
+                tfidf_country = tfidf[(tfidf["country"] == country) | (tfidf["country"] == "Greece")]
+            elif country == "Deutschland":
+                htfidf_country = htfidf[(htfidf["country"] == country) | (htfidf["country"] == "Germany")]
+                tfidf_country = tfidf[(tfidf["country"] == country) | (tfidf["country"] == "Germany")]
+            elif country == "España":
+                htfidf_country = htfidf[(htfidf["country"] == country) | (htfidf["country"] == "Spain")]
+                tfidf_country = tfidf[(tfidf["country"] == country) | (tfidf["country"] == "Spain")]
+            elif country == "Italia":
+                htfidf_country = htfidf[(htfidf["country"] == country) | (htfidf["country"] == "Italy")]
+                tfidf_country = tfidf[(tfidf["country"] == country) | (tfidf["country"] == "Italy")]
+            else:
+                htfidf_country = htfidf[htfidf["country"] == country]
+                tfidf_country = tfidf[tfidf["country"] == country]
+            frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
+            # loop on weeks
+            htfidf_overlap_per_week_df = pd.DataFrame(index=range(1))
+            for week in htfidf_country.date.unique():
+                htfidf_country_week = htfidf_country[htfidf_country["date"] == week]
+                # build on venn comparison H-TFIDF with Frequent terms
+                sets = []
+                sets.append(set(htfidf_country_week.terms[0:nb_terms]))
+                sets.append(set(frequent_terms_country.terms[0:nb_terms]))
+                try:
+                    venn_htfidf = venn2_wordcloud(sets)
+                    htfidf_overlap_per_week_df[week] = len(venn_htfidf.get_words_by_id('11'))
+                except:
+                    htfidf_overlap_per_week_df[week] = np.NAN
+            # mean value for all weeks :
+            mean_htfidf_overlap_per_week_df = htfidf_overlap_per_week_df.mean(axis=1).iloc[0] * 100 / nb_terms
+            # Compute TF-IDF overlap with Frequent termes
+            sets = []
+            sets.append(set(tfidf_country.terms[0:nb_terms]))
+            sets.append(set(frequent_terms_country.terms[0:nb_terms]))
+            logger.info(country)
+            try :
+                venn_tfidf = venn2_wordcloud(sets)
+                plt.close('all')
+                # barchart_df['TFIDF_' + country] = len(venn_tfidf.get_words_by_id('11'))
+                tfidf_overlap = len(venn_tfidf.get_words_by_id('11')) * 100 / nb_terms
+            except:
+                logger.info("No terms in biggest score for TF-IDF - country: " + country)
+                tfidf_overlap = 0.0
+            # build the row for barchart
+            if country == "Ἑλλάς":
+                country = "Greece"
+            row = {"country": country, "h-tfidf": mean_htfidf_overlap_per_week_df, "tf-idf": tfidf_overlap}
+            barchart_df = barchart_df.append(row, ignore_index=True)
+        # Plot bar chart
+        barchart_df = barchart_df.set_index("country")
+        barchart_df = barchart_df.dropna()
+        barchart_df.plot.bar(figsize=(8,6))
+        plt.subplots_adjust(bottom=0.27)
+        plt.ylabel("% overlap between H-TFIDF / TF-IDF with most frequent terms")
+        plt.savefig(plot_f_out + "_" + str(nb_terms) + ".png")
+
+    # build venn diagramm
+    ## Choose a country
+    country = "Germany"
+    nb_terms = 100
+    week = "2020-01-26"
+    ## Filtering matrix to keep TOP15 terms without term with 1 caracter or digital number
+    htfidf_country = htfidf[(htfidf["country"] == country) & (htfidf["date"] == week)]
+    tfidf_country = tfidf[tfidf["country"] == country]
+    frequent_terms_country = frequent_terms[frequent_terms["country"] == country]
+    htfidf_country = htfidf_country[htfidf_country["terms"].map(len) > 3]
+    tfidf_country = tfidf_country[tfidf_country["terms"].map(len) > 3]
+    frequent_terms_country = frequent_terms_country[frequent_terms_country["terms"].map(len) > 3]
+    ### Remove number
+    htfidf_country_terms = htfidf_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    tfidf_country_terms = tfidf_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    frequent_terms_country_terms = frequent_terms_country["terms"].replace("^\d+", np.nan, regex=True).dropna().head(nb_terms)
+    columns_name = []
+    latex_table_nb_terms = 15
+    for i in range(latex_table_nb_terms):
+        columns_name.append("rank "+str(i))
+    latex_table = pd.DataFrame(index=range(3), columns=columns_name)
+    latex_table.loc["H-TFIDF"] = htfidf_country_terms.head(latex_table_nb_terms).values
+    latex_table.loc["TF-IDF"] = tfidf_country_terms.head(latex_table_nb_terms).values
+    latex_table.loc["Frequent terms"] = frequent_terms_country_terms.head(latex_table_nb_terms).values
+    print(latex_table.T[["H-TFIDF", "TF-IDF", "Frequent terms"]].to_latex(index=False))
+    sets = []
+    sets.append(set(htfidf_country_terms))
+    sets.append(set(tfidf_country_terms))
+    sets.append(set(frequent_terms_country_terms))
+    fig, ax = plt.subplots(figsize=(8, 6))
+    venn_3 = venn3_wordcloud(sets, set_labels=["H-TFIDF", "TF-IDF", "Frequent terms"], ax=ax)
+    plt.savefig(plot_f_out + "_"+ country + "venn3.png")
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -1079,7 +1181,7 @@ if __name__ == '__main__':
     ## List of country to work on :
     listOfLocalities = ["Deutschland", "España", "France", "Italia", "United Kingdom"]
     ## elastic query :
-    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_1rstweekFeb.txt"
+    query_fname = "elasticsearch/analyse/nldb21/elastic-query/nldb21_europeBySpatialExtent_en_february.txt"
     ## Path to results :
     period_extent = "feb_tfidf_whole"
     f_path_result = "elasticsearch/analyse/nldb21/results/" + period_extent + "_" + timeLevel
@@ -1091,8 +1193,8 @@ if __name__ == '__main__':
     build_htfidf = False
     build_htfidf_save_intermediaire_files = True
     ## eval 1 : Comparison with classical TF-IDf
-    build_classical_tfidf = True
-    build_classical_tfidf_save_intermediaire_files = True
+    build_classical_tfidf = False
+    build_classical_tfidf_save_intermediaire_files = False
     ## evla 2 : Use word_embedding with t-SNE
     build_tsne = False
     build_tsne_spatial_level = "country"
@@ -1100,7 +1202,7 @@ if __name__ == '__main__':
     build_boxplot = False
     build_boxplot_spatial_level = "country"
     ## eval 4 : Compare H-TFIDF and TF-IDF with most frequent terms by level
-    build_compare_measures = False
+    build_compare_measures = True
     build_compare_measures_build_intermedate_files = False
     build_compare_measures_level = "country"
     build_compare_measures_localities = ["Ἑλλάς", "Deutschland", "España", "France", "Italia", "Portugal", "United Kingdom"]
@@ -1207,8 +1309,8 @@ if __name__ == '__main__':
             ft = pd.read_csv(f_path_result_compare_meassures_file)
         # files_path
         htfidf_f = f_path_result + "/country/h-tfidf-Biggest-score.csv"
-        tfidf_corpus_contry_f = f_path_result + "/tf-idf-classical/tfidf-tf-corpus-country/TF-IDF_BiggestScore_on_country_corpus.csv"
-        comparison_htfidf_tfidf_frequentterms(htfidf_f, tfidf_corpus_contry_f, ft, logger,
+        tfidf_corpus_whole_f = f_path_result + "/tf-idf-classical/TFIDF_BiggestScore_on_whole_corpus.csv"
+        comparison_htfidf_tfidfwhole_frequentterms(htfidf_f, tfidf_corpus_whole_f, ft, logger,
                                               f_path_result_compare_meassures_plot,
                                               listOfCountries=build_compare_measures_localities)
 
